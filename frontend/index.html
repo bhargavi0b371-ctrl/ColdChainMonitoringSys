@@ -1,0 +1,2265 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Cold Chain Monitoring System | IoT Telemetry & Fleet GPS Dispatch</title>
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            coldnavy: {
+              950: '#040812',
+              900: '#070f21',
+              850: '#0b162f',
+              800: '#111f3f',
+              750: '#182b54',
+              700: '#20376a'
+            },
+            tealaccent: {
+              300: '#5eead4',
+              400: '#2dd4bf',
+              500: '#14b8a6',
+              600: '#0d9488'
+            },
+            cyanaccent: {
+              300: '#67e8f9',
+              400: '#22d3ee',
+              500: '#06b6d4',
+              600: '#0891b2'
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'SFMono-Regular', 'Menlo', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Leaflet CSS & JS for OpenStreetMap Live Fleet GPS Tracking -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <link rel="stylesheet" href="assets/css/dashboard.css">
+</head>
+<body class="bg-coldnavy-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-cyan-500 selection:text-white flex">
+
+  <!-- ========================================================
+       MOBILE SIDEBAR BACKDROP OVERLAY
+       ======================================================== -->
+  <div id="sidebar-backdrop" onclick="toggleSidebar(false)" class="fixed inset-0 bg-black/60 z-40 lg:hidden hidden backdrop-blur-xs transition-opacity"></div>
+
+  <!-- ========================================================
+       VERTICAL LEFT SIDEBAR NAVIGATION (Fixed Width 260px, Dark Navy)
+       ======================================================== -->
+  <aside id="sidebar" class="fixed left-0 top-0 h-screen w-[260px] bg-coldnavy-900 border-r border-coldnavy-800 flex flex-col z-50 shadow-2xl shadow-coldnavy-950/80 -translate-x-full lg:translate-x-0 transition-transform duration-200 ease-in-out">
+    
+    <!-- Sidebar Header: Brand & Identity -->
+    <div class="px-5 py-5 border-b border-coldnavy-800 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-600 via-teal-500 to-blue-500 p-0.5 shadow-lg shadow-cyan-500/20 flex items-center justify-center flex-shrink-0">
+          <div class="w-full h-full bg-coldnavy-950 rounded-[10px] flex items-center justify-center">
+            <i data-lucide="snowflake" class="w-5 h-5 text-cyan-400"></i>
+          </div>
+        </div>
+        <div>
+          <h1 class="text-sm font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-cyan-300 bg-clip-text text-transparent leading-tight">
+            SMART COLD CHAIN
+          </h1>
+          <p class="text-[10px] text-cyan-400 font-semibold tracking-wide uppercase mt-0.5">
+            IoT Telemetry &amp; Dispatch
+          </p>
+        </div>
+      </div>
+      <!-- Mobile Close Drawer Button -->
+      <button onclick="toggleSidebar(false)" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-coldnavy-800 transition">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Live Status Pill in Sidebar -->
+    <div class="px-4 py-3 border-b border-coldnavy-800/80">
+      <div class="flex items-center justify-between px-3 py-2 rounded-xl bg-coldnavy-950/80 border border-coldnavy-800 text-[11px] font-mono">
+        <div class="flex items-center gap-2">
+          <span class="relative flex h-2 w-2">
+            <span class="pulse-ring-green absolute inline-flex h-full w-full rounded-full bg-emerald-400"></span>
+            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+          </span>
+          <span class="text-slate-400">MQTT:</span>
+          <span class="text-emerald-400 font-bold" id="sidebar-mesh-status">ONLINE</span>
+        </div>
+        <span class="text-slate-500">22ms</span>
+      </div>
+    </div>
+
+    <!-- Navigation Section Label -->
+    <div class="px-5 pt-4 pb-2">
+      <span class="text-[10px] font-bold tracking-wider uppercase text-slate-500 font-mono">Navigation Modules</span>
+    </div>
+
+    <!-- Vertically Stacked Navigation Items -->
+    <nav class="flex-1 px-3 space-y-1.5 overflow-y-auto">
+      
+      <!-- 1st: Sensors & Telemetry Analytics (Integrated with Autonomous AI Co-Pilot) -->
+      <button onclick="switchTab('telemetry')" id="tab-telemetry" class="tab-btn active">
+        <i data-lucide="activity" class="w-4 h-4 flex-shrink-0 text-cyan-400"></i>
+        <span class="truncate flex-1">Sensors &amp; Telemetry Analytics</span>
+        <span class="px-1.5 py-0.2 rounded-full text-[9px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">AI</span>
+      </button>
+
+      <!-- 2nd: Regulatory Compliance & Audit Logs -->
+      <button onclick="switchTab('compliance')" id="tab-compliance" class="tab-btn">
+        <i data-lucide="file-check-2" class="w-4 h-4 flex-shrink-0"></i>
+        <span class="truncate flex-1">Regulatory Compliance &amp; Audit Logs</span>
+      </button>
+
+      <!-- 3rd: Spoilage Prevention & Alerts -->
+      <button onclick="switchTab('alerts')" id="tab-alerts" class="tab-btn">
+        <i data-lucide="alert-triangle" class="w-4 h-4 flex-shrink-0 text-rose-400"></i>
+        <span class="truncate flex-1">Spoilage Prevention &amp; Alerts</span>
+        <span class="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-rose-500 text-white font-bold" id="badge-tab-alert-count">1</span>
+      </button>
+
+      <!-- 4th: Google Maps Fleet Dispatch -->
+      <button onclick="switchTab('fleet-gps')" id="tab-fleet-gps" class="tab-btn">
+        <i data-lucide="navigation" class="w-4 h-4 flex-shrink-0"></i>
+        <span class="truncate flex-1">Google Maps Fleet Dispatch</span>
+        <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">3</span>
+      </button>
+
+      <!-- 5th: Settings -->
+      <button onclick="switchTab('settings')" id="tab-settings" class="tab-btn">
+        <i data-lucide="settings" class="w-4 h-4 flex-shrink-0"></i>
+        <span class="truncate flex-1">Settings</span>
+      </button>
+
+    </nav>
+
+    <!-- Sidebar Footer / System Badge -->
+    <div class="p-4 border-t border-coldnavy-800 bg-coldnavy-950/60 mt-auto">
+      <div class="flex items-center justify-between text-xs text-slate-400 mb-2">
+        <span class="flex items-center gap-1.5">
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-cyan-400"></i>
+          <span id="sidebar-live-time" class="font-mono">10:30:00 UTC</span>
+        </span>
+        <span class="text-[10px] px-1.5 py-0.5 rounded bg-coldnavy-800 text-slate-400 font-mono">v2.4.1</span>
+      </div>
+      <div class="text-[10px] text-slate-500 leading-tight">
+        Pharmaceutical &amp; Cold-Chain Transit Integrity
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ========================================================
+       RIGHT APP CONTENT AREA (Expands / Shifts by 260px on Desktop)
+       ======================================================== -->
+  <div class="flex-1 flex flex-col min-w-0 min-h-screen lg:ml-[260px] w-full">
+    
+    <!-- Top Header Bar with View Subtitle & Telemetry Controls -->
+    <header class="bg-coldnavy-900/90 border-b border-coldnavy-800 sticky top-0 z-30 backdrop-blur-md">
+      <div class="px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4 max-w-[1720px] mx-auto w-full">
+        
+        <!-- Left: Mobile Menu Toggle Button + View Title -->
+        <div class="flex items-center gap-3">
+          <button onclick="toggleSidebar(true)" class="lg:hidden p-2 rounded-xl bg-coldnavy-850 border border-coldnavy-750 text-slate-300 hover:text-white hover:border-cyan-500/50 transition">
+            <i data-lucide="menu" class="w-5 h-5 text-cyan-400"></i>
+          </button>
+          <div>
+            <h2 class="text-sm sm:text-base font-bold text-white tracking-tight flex items-center gap-2">
+              <span class="text-cyan-400">IoT Cold Chain Dashboard</span>
+              <span class="text-slate-600 hidden sm:inline">•</span>
+              <span class="text-xs text-slate-400 font-medium hidden sm:inline">Real-time Telemetry &amp; Fleet GPS Dispatch</span>
+            </h2>
+          </div>
+        </div>
+
+        <!-- Right: Telemetry Controls & Live Status -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          
+          <!-- Temperature Unit Toggle (°C / °F) -->
+          <div class="flex items-center bg-coldnavy-850 border border-coldnavy-750 rounded-xl p-1 text-xs">
+            <button id="btn-unit-c" onclick="setTempUnit('C')" class="px-2.5 py-1 rounded-lg font-mono font-bold transition bg-cyan-500 text-coldnavy-950 shadow">°C</button>
+            <button id="btn-unit-f" onclick="setTempUnit('F')" class="px-2.5 py-1 rounded-lg font-mono font-semibold text-slate-400 hover:text-white transition">°F</button>
+          </div>
+
+          <!-- Live Clock -->
+          <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-coldnavy-850 border border-coldnavy-750 text-xs font-mono text-slate-300">
+            <i data-lucide="clock" class="w-3.5 h-3.5 text-cyan-400"></i>
+            <span id="header-live-time">10:30:00 UTC</span>
+          </div>
+
+          <!-- MQTT Telemetry Pipeline Status -->
+          <div class="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-coldnavy-850 border border-coldnavy-750 text-xs">
+            <span class="relative flex h-2 w-2">
+              <span class="pulse-ring-green absolute inline-flex h-full w-full rounded-full bg-emerald-400"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span class="text-slate-400 font-mono text-[11px]">MQTT Pipeline:</span>
+            <span class="text-emerald-400 font-mono font-bold text-[11px]" id="header-mesh-status">ONLINE (22ms)</span>
+          </div>
+
+          <!-- AI Autonomous Sentinel Header Indicator -->
+          <div class="hidden lg:flex items-center gap-2 bg-coldnavy-850 border border-emerald-500/30 rounded-xl px-2.5 py-1 text-xs">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-[10px] text-slate-400 font-mono">AI Engine:</span>
+            <span class="px-2 py-0.5 rounded-md font-mono text-[11px] font-bold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+              <i data-lucide="zap" class="w-3 h-3 text-emerald-400"></i>
+              FULLY AUTONOMOUS
+            </span>
+          </div>
+
+          <!-- Quick Rollback Action Button -->
+          <button id="btn-header-undo" onclick="triggerGlobalRollback()" class="p-2 rounded-lg bg-coldnavy-850 hover:bg-coldnavy-800 border border-coldnavy-750 text-purple-300 transition flex items-center gap-1 text-xs" title="Rollback Recent AI Parameter Changes">
+            <i data-lucide="rotate-ccw" class="w-4 h-4 text-purple-400"></i>
+            <span id="header-undo-badge" class="px-1 py-0.2 rounded-full bg-purple-950 text-purple-300 font-mono text-[9px] border border-purple-800">2</span>
+          </button>
+
+          <!-- Toggle AI Thought Stream Drawer -->
+          <button onclick="toggleThoughtDrawer()" class="px-2.5 py-1.5 rounded-lg bg-cyan-950/70 hover:bg-cyan-900/80 border border-cyan-800 text-cyan-300 transition flex items-center gap-1.5 text-xs" title="Toggle AI Cognitive Activity Stream">
+            <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+            <span class="hidden xl:inline text-[11px] font-mono font-semibold">AI Stream</span>
+            <i data-lucide="brain-circuit" class="w-4 h-4 text-cyan-400"></i>
+          </button>
+
+          <!-- Quick Audio Alarm Toggle -->
+          <button id="btn-audio-toggle" onclick="toggleAudioAlerts()" class="p-2 rounded-lg bg-coldnavy-850 border border-coldnavy-750 text-slate-300 hover:text-white hover:border-cyan-500/50 transition flex items-center gap-1.5 text-xs" title="Toggle Audio Alarm Beep">
+            <i data-lucide="volume-2" id="audio-icon" class="w-4 h-4 text-cyan-400"></i>
+            <span class="hidden md:inline text-[11px] font-medium" id="audio-label">Sound: On</span>
+          </button>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Global Rollback Notification Bar -->
+    <div id="rollbackNotificationBar" class="hidden bg-gradient-to-r from-purple-950/90 to-coldnavy-900 border-b border-purple-800/60 px-6 py-2.5 text-xs text-purple-200 flex items-center justify-between transition-all z-20">
+      <div class="flex items-center gap-2">
+        <i data-lucide="rotate-ccw" class="w-4 h-4 text-purple-400 flex-shrink-0"></i>
+        <span id="rollbackMessageText" class="font-mono">Reverted: Dynamic threshold on Unit CC-804 restored from -70.5°C to Factory Baseline (-68.0°C).</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="text-slate-400 text-[11px]">Audit ID: <strong class="text-purple-300 font-mono">RB-9021-OK</strong></span>
+        <button onclick="dismissRollbackBar()" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+    </div>
+
+    <!-- Collapsible AI Thought Stream Drawer Overlay -->
+    <aside id="thoughtDrawer" class="fixed top-16 right-0 w-96 h-[calc(100vh-4rem)] bg-coldnavy-900/95 backdrop-blur-md border-l border-cyan-900/60 z-50 transform translate-x-full transition-transform duration-300 shadow-2xl flex flex-col">
+      <div class="p-4 border-b border-coldnavy-800 flex items-center justify-between bg-coldnavy-950/80">
+        <div class="flex items-center gap-2">
+          <div class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping"></div>
+          <div>
+            <h2 class="text-xs font-bold uppercase tracking-wider text-cyan-400">AI Cognitive Thought Stream</h2>
+            <p class="text-[11px] text-slate-400">Live Intent, Physics Model &amp; Predictive Ingest</p>
+          </div>
+        </div>
+        <button onclick="toggleThoughtDrawer()" class="p-1 rounded hover:bg-coldnavy-800 text-slate-400 hover:text-white transition">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="px-4 py-2 bg-coldnavy-950/40 border-b border-coldnavy-800/80 flex items-center gap-2 text-[11px] font-mono">
+        <span class="text-slate-400">Filter:</span>
+        <span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800">ALL</span>
+        <span class="px-2 py-0.5 rounded bg-coldnavy-800 text-slate-400 hover:text-white cursor-pointer">PREDICTIONS</span>
+        <span class="px-2 py-0.5 rounded bg-coldnavy-800 text-slate-400 hover:text-white cursor-pointer">CALIBRATION</span>
+      </div>
+
+      <div id="aiActivityFeed" class="flex-1 p-4 overflow-y-auto space-y-3 font-mono text-xs custom-scrollbar">
+        <div class="p-2.5 rounded-lg bg-coldnavy-950/70 border border-cyan-900/40 text-slate-300 space-y-1">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-cyan-400 font-bold">[TELEMETRY INGEST]</span>
+            <span class="text-slate-500">20:38:04</span>
+          </div>
+          <p class="text-[11px] text-slate-300">Evaluating 186 telemetry channels across 4 convoy assets. Baseline sensor variance steady at ±0.04°C.</p>
+        </div>
+        <div class="p-2.5 rounded-lg bg-coldnavy-950/70 border border-purple-900/40 text-slate-300 space-y-1">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-purple-400 font-bold">[HISTORICAL FEEDBACK]</span>
+            <span class="text-slate-500">20:38:09</span>
+          </div>
+          <p class="text-[11px] text-slate-300">Comparing T-4h forecast with ground truth on Unit CC-512. Prediction residual: 0.12°C (MAPE 0.88%). Self-correction gain recalibrated β=0.982.</p>
+        </div>
+        <div class="p-2.5 rounded-lg bg-coldnavy-950/70 border border-amber-900/40 text-slate-300 space-y-1">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-amber-400 font-bold">[VIBRATION ANOMALY]</span>
+            <span class="text-slate-500">20:38:15</span>
+          </div>
+          <p class="text-[11px] text-slate-300">Unit CC-804 harmonic peak at 142 Hz elevated to 3.82 mm/s. Predicting bearing race fatigue in 18.4 days. Maintenance ticket pre-staged.</p>
+        </div>
+        <div class="p-2.5 rounded-lg bg-coldnavy-950/70 border border-rose-900/40 text-slate-300 space-y-1">
+          <div class="flex items-center justify-between text-[11px]">
+            <span class="text-rose-400 font-bold">[PREDICTIVE RISK SURGE]</span>
+            <span class="text-slate-500">20:38:22</span>
+          </div>
+          <p class="text-[11px] text-slate-300">Interstate 95 thermal island ahead. Forecast anticipates temperature breach of -70.0°C in 38 mins. High-impact cryo intervention paused in HITL tray.</p>
+        </div>
+      </div>
+
+      <div class="p-3 border-t border-coldnavy-800 bg-coldnavy-950/90 text-[11px] text-slate-400 flex items-center justify-between">
+        <span>Self-Correction Cycle: <strong class="text-emerald-400 font-mono">1.2s</strong></span>
+        <span class="text-cyan-400 font-mono">KALMAN_ACTIVE</span>
+      </div>
+    </aside>
+
+    <!-- ========================================================
+         MAIN DASHBOARD CONTAINER
+         ======================================================== -->
+    <main class="max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 flex-1 w-full">
+
+    <!-- ========================================================
+         1. TOP KPI SUMMARY CARDS (4 Cards Overview)
+         ======================================================== -->
+    <section id="top-kpi-summary" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      
+      <!-- Card 1: ACTIVE SHIPMENTS & DISPATCH -->
+      <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-coldnavy-700 transition">
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-cyan-500/10 rounded-full blur-xl group-hover:bg-cyan-500/20 transition"></div>
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Delivery Fleet</p>
+            <div class="flex items-baseline gap-2 mt-1.5">
+              <h3 class="text-3xl font-extrabold text-white tracking-tight font-mono" id="kpi-active-shipments">3 Active</h3>
+              <span class="text-xs text-cyan-400 font-mono font-bold" id="kpi-delivered-count">/ 0 Delivered</span>
+            </div>
+          </div>
+          <div class="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-cyan-400">
+            <i data-lucide="truck" class="w-6 h-6"></i>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-coldnavy-800 flex items-center justify-between text-xs">
+          <span class="inline-flex items-center text-cyan-400 font-semibold gap-1">
+            <i data-lucide="map-pin" class="w-3.5 h-3.5"></i> Common Warehouse Depot
+          </span>
+          <span class="text-slate-400 font-mono text-[11px]">3 Branch Routes</span>
+        </div>
+      </div>
+
+      <!-- Card 2: TEMPERATURE FLEET STATUS -->
+      <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-coldnavy-700 transition">
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-rose-500/10 rounded-full blur-xl group-hover:bg-rose-500/20 transition"></div>
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Temperature Status</p>
+            <div class="flex items-baseline gap-2 mt-1.5">
+              <h3 class="text-3xl font-extrabold text-emerald-400 tracking-tight font-mono" id="kpi-safe-count">2 Safe</h3>
+              <span class="text-lg font-bold text-rose-500 font-mono" id="kpi-alert-count">/ 1 Alert</span>
+            </div>
+          </div>
+          <div class="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400">
+            <i data-lucide="thermometer-snowflake" class="w-6 h-6"></i>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-coldnavy-800 flex items-center justify-between text-xs">
+          <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold text-[11px]" id="kpi-compliance-pct">
+            66.7% Compliant
+          </span>
+          <span class="text-rose-400 font-semibold text-[11px] flex items-center gap-1" id="kpi-excursion-text">
+            <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span>
+            CC-103 Temp Excursion
+          </span>
+        </div>
+      </div>
+
+      <!-- Card 3: AVERAGE TEMP & HUMIDITY -->
+      <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-coldnavy-700 transition">
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-teal-500/10 rounded-full blur-xl group-hover:bg-teal-500/20 transition"></div>
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Average Fleet Telemetry</p>
+            <div class="flex items-baseline gap-3 mt-1.5">
+              <h3 class="text-3xl font-extrabold text-white tracking-tight font-mono" id="kpi-avg-temp">4.8°C</h3>
+              <span class="text-base font-bold text-cyan-400 font-mono" id="kpi-avg-hum">67% RH</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 p-2.5 bg-teal-500/10 border border-teal-500/20 rounded-xl text-teal-400">
+            <i data-lucide="thermometer" class="w-5 h-5"></i>
+            <i data-lucide="droplets" class="w-5 h-5 text-cyan-400"></i>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-coldnavy-800 flex items-center justify-between text-xs">
+          <span class="text-slate-400">Target Range:</span>
+          <span class="text-teal-300 font-mono font-bold text-[11px] bg-teal-500/10 px-2 py-0.5 rounded border border-teal-500/20" id="kpi-target-range">
+            2.0°C – 8.0°C (35.6°F – 46.4°F)
+          </span>
+        </div>
+      </div>
+
+      <!-- Card 4: TELEMETRY DATA PIPELINE -->
+      <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-coldnavy-700 transition">
+        <div class="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-xl group-hover:bg-emerald-500/20 transition"></div>
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Telemetry Data Pipeline</p>
+            <div class="flex items-center gap-2 mt-1.5">
+              <h3 class="text-3xl font-extrabold text-emerald-400 tracking-tight font-mono">3 / 3 Streams</h3>
+              <span class="text-xs font-bold text-emerald-400 flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                Active
+              </span>
+            </div>
+          </div>
+          <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400">
+            <i data-lucide="server" class="w-6 h-6"></i>
+          </div>
+        </div>
+        <div class="mt-4 pt-3 border-t border-coldnavy-800 flex items-center justify-between text-xs">
+          <span class="text-slate-400 font-mono text-[11px]">MQTT QoS 1 • HiveMQ Cloud</span>
+          <span class="text-slate-300 font-mono text-[11px] flex items-center gap-1 font-semibold">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i> Pipeline Health: 100%
+          </span>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ========================================================
+         TAB CONTENT: 4. FLEET GPS NAVIGATION & DISPATCH
+         ======================================================== -->
+    <div id="section-fleet-gps" class="space-y-6 hidden">
+
+      <!-- Dispatch Command Header -->
+      <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 sm:p-6 shadow-xl relative overflow-hidden">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative z-10">
+          <div>
+            <div class="flex items-center gap-3">
+              <span class="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+                <i data-lucide="map" class="w-5 h-5"></i>
+              </span>
+              <div>
+                <h2 class="text-lg sm:text-xl font-extrabold text-white tracking-tight flex items-center gap-2">
+                  <span>Google Maps-Style Fleet Road Navigation</span>
+                  <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 rounded-full">
+                    1 Source • 3 Distinct Road Routes
+                  </span>
+                </h2>
+                <p class="text-xs sm:text-sm text-slate-400 mt-0.5">
+                  All 3 delivery vehicles start from the <strong class="text-white">Central Warehouse</strong> and independently navigate along real road geometries to their distinct assigned destinations.
+                </p>
+              </div>
+            </div>
+
+            <!-- Common Source Location Badge -->
+            <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-coldnavy-800 border border-coldnavy-700 font-mono text-cyan-300">
+                <i data-lucide="warehouse" class="w-3.5 h-3.5 text-cyan-400"></i>
+                <span>Common Source: Central Warehouse (51.5155° N, -0.0922° W)</span>
+              </span>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono">
+                <span class="w-2 h-2 rounded-full bg-cyan-400"></span>
+                <span>Veh 1: Cyan Route → Dest A</span>
+              </span>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-blue-500/10 border border-blue-500/30 text-blue-400 font-mono">
+                <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                <span>Veh 2: Blue Route → Dest B</span>
+              </span>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-400 font-mono">
+                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                <span>Veh 3: Red Route → Dest C</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Dispatch Action Buttons -->
+          <div class="flex flex-wrap items-center gap-2.5">
+            <!-- Start Dispatch Button -->
+            <button id="btn-start-dispatch" onclick="startDispatch()" 
+                    class="flex items-center gap-2 px-5 py-3 text-xs font-extrabold rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-coldnavy-950 transition-all shadow-lg shadow-emerald-500/25 active:scale-95 cursor-pointer">
+              <i data-lucide="play" class="w-4 h-4 fill-coldnavy-950"></i>
+              <span id="btn-dispatch-text">Start Dispatch</span>
+            </button>
+
+            <!-- Pause Tracking Button -->
+            <button id="btn-pause-dispatch" onclick="pauseDispatch()" 
+                    class="flex items-center gap-2 px-4 py-3 text-xs font-semibold rounded-xl bg-coldnavy-850 hover:bg-coldnavy-800 text-amber-300 border border-amber-500/30 hover:border-amber-400 transition-all active:scale-95 cursor-pointer">
+              <i data-lucide="pause" class="w-4 h-4 fill-amber-300"></i>
+              <span>Pause</span>
+            </button>
+
+            <!-- Reset Routes Button -->
+            <button onclick="resetAllRoutes()" 
+                    class="flex items-center gap-2 px-4 py-3 text-xs font-semibold rounded-xl bg-coldnavy-850 hover:bg-coldnavy-800 text-slate-200 border border-coldnavy-750 hover:border-cyan-500/50 transition-all active:scale-95 cursor-pointer">
+              <i data-lucide="rotate-ccw" class="w-4 h-4 text-cyan-400"></i>
+              <span>Reset to Warehouse</span>
+            </button>
+
+            <!-- Recenter Map -->
+            <button onclick="recenterMapOverview()" 
+                    class="flex items-center gap-2 px-4 py-3 text-xs font-semibold rounded-xl bg-coldnavy-850 hover:bg-coldnavy-800 text-slate-200 border border-coldnavy-750 hover:border-cyan-500/50 transition-all active:scale-95 cursor-pointer">
+              <i data-lucide="crosshair" class="w-4 h-4 text-cyan-400"></i>
+              <span>Overview Fit</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 Delivery Vehicle Navigation Cards (Google Maps Cards) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        <!-- Vehicle 1: Cyan Route (CC-101 Vaccines) -->
+        <div id="card-veh-CC-101" onclick="focusVehicle('CC-101')" 
+             class="bg-coldnavy-900 border-2 border-cyan-400 rounded-2xl p-4 shadow-xl cursor-pointer hover:border-cyan-300 transition-all relative overflow-hidden">
+          <div class="flex items-center justify-between pb-2 border-b border-coldnavy-800">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-cyan-400 pulse-ring-cyan"></span>
+              <span class="font-mono font-black text-white text-sm">CC-101</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">CYAN ROUTE</span>
+            </div>
+            <span id="badge-status-CC-101" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              Ready
+            </span>
+          </div>
+          
+          <div class="mt-3 space-y-2 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 font-medium">Cargo:</span>
+              <span class="font-bold text-white flex items-center gap-1">
+                <i data-lucide="syringe" class="w-3.5 h-3.5 text-cyan-400"></i> Vaccines (mRNA)
+              </span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 font-medium">Destination A:</span>
+              <span class="font-bold text-cyan-300 truncate max-w-[180px]">St. Thomas' Hospital Hub</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 pt-1 text-center font-mono">
+              <div class="bg-coldnavy-950 p-2 rounded-lg border border-coldnavy-800">
+                <span class="text-[9px] text-slate-400 uppercase block font-sans">Speed</span>
+                <span class="font-black text-white text-xs" id="nav-speed-CC-101">0 km/h</span>
+              </div>
+              <div class="bg-coldnavy-950 p-2 rounded-lg border border-coldnavy-800">
+                <span class="text-[9px] text-slate-400 uppercase block font-sans">Distance</span>
+                <span class="font-black text-cyan-300 text-xs" id="nav-dist-CC-101">4.2 km</span>
+              </div>
+              <div class="bg-coldnavy-950 p-2 rounded-lg border border-coldnavy-800">
+                <span class="text-[9px] text-slate-400 uppercase block font-sans">ETA</span>
+                <span class="font-black text-emerald-400 text-xs" id="nav-eta-CC-101">11 min</span>
+              </div>
+            </div>
+            <!-- Progress Bar -->
+            <div class="pt-1">
+              <div class="flex justify-between text-[10px] text-slate-400 font-mono mb-1">
+                <span>Route Progress</span>
+                <span id="nav-prog-pct-CC-101">0%</span>
+              </div>
+              <div class="w-full h-2 bg-coldnavy-950 rounded-full overflow-hidden border border-coldnavy-800">
+                <div id="nav-progress-CC-101" class="h-full bg-gradient-to-r from-teal-400 to-cyan-400 rounded-full transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-1 border-t border-coldnavy-800 text-[11px]">
+              <span class="text-slate-400 font-mono">Temp: <strong class="text-emerald-400" id="card-temp-CC-101">4.2°C</strong></span>
+              <span class="text-cyan-400 font-mono text-[10px]">Driver: Rajan M.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vehicle 2: Blue Route (CC-102 Dairy) -->
+        <div id="card-veh-CC-102" onclick="focusVehicle('CC-102')" 
+             class="bg-coldnavy-900 border-2 border-blue-500 rounded-2xl p-4 shadow-xl cursor-pointer hover:border-blue-400 transition-all relative overflow-hidden">
+          <div class="flex items-center justify-between pb-2 border-b border-coldnavy-800">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-blue-500 pulse-ring-blue"></span>
+              <span class="font-mono font-black text-white text-sm">CC-102</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/10 text-blue-400 border border-blue-500/30">BLUE ROUTE</span>
+            </div>
+            <span id="badge-status-CC-102" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              Ready
+            </span>
+          </div>
+          
+          <div class="mt-3 space-y-2 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 font-medium">Cargo:</span>
+              <span class="font-bold text-white flex items-center gap-1">
+                <i data-lucide="milk" class="w-3.5 h-3.5 text-blue-400"></i> Dairy &amp; Organic Milk
+              </span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 font-medium">Destination B:</span>
+              <span class="font-bold text-blue-300 truncate max-w-[180px]">East London Regional Hub</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 pt-1 text-center font-mono">
+              <div class="bg-coldnavy-950 p-2 rounded-lg border border-coldnavy-800">
+                <span class="text-[9px] text-slate-400 uppercase block font-sans">Speed</span>
+                <span class="font-black text-white text-xs" id="nav-speed-CC-102">0 km/h</span>
+              </div>
+              <div class="bg-coldnavy-950 p-2 rounded-lg border border-coldnavy-800">
+                <span class="text-[9px] text-slate-400 uppercase block font-sans">Distance</span>
+                <span class="font-black text-blue-300 text-xs" id="nav-dist-CC-102">4.8 km</span>
+              </div>
+              <div class="bg-coldnavy-950 p-2 rounded-lg border border-coldnavy-800">
+                <span class="text-[9px] text-slate-400 uppercase block font-sans">ETA</span>
+                <span class="font-black text-emerald-400 text-xs" id="nav-eta-CC-102">13 min</span>
+              </div>
+            </div>
+            <!-- Progress Bar -->
+            <div class="pt-1">
+              <div class="flex justify-between text-[10px] text-slate-400 font-mono mb-1">
+                <span>Route Progress</span>
+                <span id="nav-prog-pct-CC-102">0%</span>
+              </div>
+              <div class="w-full h-2 bg-coldnavy-950 rounded-full overflow-hidden border border-coldnavy-800">
+                <div id="nav-progress-CC-102" class="h-full bg-gradient-to-r from-blue-600 to-blue-400 rounded-full transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-1 border-t border-coldnavy-800 text-[11px]">
+              <span class="text-slate-400 font-mono">Temp: <strong class="text-emerald-400" id="card-temp-CC-102">4.8°C</strong></span>
+              <span class="text-blue-400 font-mono text-[10px]">Driver: Sunita D.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vehicle 3: Red Route (CC-103 Seafood / Perishables - Critical Excursion) -->
+        <div id="card-veh-CC-103" onclick="focusVehicle('CC-103')" 
+             class="bg-coldnavy-900 border-2 border-rose-500 rounded-2xl p-4 shadow-xl cursor-pointer hover:border-rose-400 transition-all relative overflow-hidden">
+          <div class="flex items-center justify-between pb-2 border-b border-coldnavy-800">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full bg-rose-500 pulse-ring-red"></span>
+              <span class="font-mono font-black text-rose-300 text-sm">CC-103</span>
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/10 text-rose-400 border border-rose-500/30">RED ROUTE</span>
+            </div>
+            <span id="badge-status-CC-103" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-500/20 text-rose-400 border border-rose-500/40 animate-pulse">
+              Excursion Alert
+            </span>
+          </div>
+          
+          <div class="mt-3 space-y-2 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 font-medium">Cargo:</span>
+              <span class="font-bold text-white flex items-center gap-1">
+                <i data-lucide="fish" class="w-3.5 h-3.5 text-rose-400"></i> Seafood &amp; Perishables
+              </span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 font-medium">Destination C:</span>
+              <span class="font-bold text-rose-300 truncate max-w-[180px]">Southwark Cold Terminal</span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 pt-1 text-center font-mono">
+              <div class="bg-coldnavy-950 p-2 rounded-lg border border-coldnavy-800">
+                <span class="text-[9px] text-slate-400 uppercase block font-sans">Speed</span>
+                <span class="font-black text-white text-xs" id="nav-speed-CC-103">0 km/h</span>
+              </div>
+              <div class="bg-coldnavy-950 p-2 rounded-lg border border-coldnavy-800">
+                <span class="text-[9px] text-slate-400 uppercase block font-sans">Distance</span>
+                <span class="font-black text-rose-300 text-xs" id="nav-dist-CC-103">3.9 km</span>
+              </div>
+              <div class="bg-coldnavy-950 p-2 rounded-lg border border-coldnavy-800">
+                <span class="text-[9px] text-slate-400 uppercase block font-sans">ETA</span>
+                <span class="font-black text-amber-400 text-xs" id="nav-eta-CC-103">10 min</span>
+              </div>
+            </div>
+            <!-- Progress Bar -->
+            <div class="pt-1">
+              <div class="flex justify-between text-[10px] text-slate-400 font-mono mb-1">
+                <span>Route Progress</span>
+                <span id="nav-prog-pct-CC-103">0%</span>
+              </div>
+              <div class="w-full h-2 bg-coldnavy-950 rounded-full overflow-hidden border border-coldnavy-800">
+                <div id="nav-progress-CC-103" class="h-full bg-gradient-to-r from-rose-600 to-rose-400 rounded-full transition-all duration-300" style="width: 0%"></div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-1 border-t border-coldnavy-800 text-[11px]">
+              <span class="text-slate-400 font-mono">Temp: <strong class="text-rose-400 animate-pulse" id="card-temp-CC-103">9.2°C ⚠</strong></span>
+              <span class="text-rose-400 font-mono text-[10px]">Driver: Arjun K.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Live GPS Road Map Container -->
+      <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+        
+        <!-- Map Title & Status Badges -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-coldnavy-800 gap-3">
+          <div>
+            <h3 class="font-bold text-white text-base tracking-tight flex items-center gap-2">
+              <i data-lucide="navigation-2" class="w-5 h-5 text-cyan-400"></i>
+              Live Road Geometry Tracking
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">
+              Continuous GPS telemetry following London road corridors from common dispatch hub.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <button id="btn-toggle-follow" onclick="toggleFollowMode()" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-coldnavy-850 border border-coldnavy-750 text-slate-300 hover:text-white transition flex items-center gap-1.5 cursor-pointer">
+              <i data-lucide="crosshair" class="w-3.5 h-3.5 text-cyan-400"></i>
+              <span id="label-follow-mode">Follow Active Vehicle: OFF</span>
+            </button>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>OSRM / Road Routing: Active</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- The Leaflet Map Canvas -->
+        <div class="mt-4 relative rounded-xl overflow-hidden border border-coldnavy-800 h-[520px] sm:h-[600px] bg-coldnavy-950">
+          <div id="fleet-map" class="w-full h-full z-10"></div>
+
+          <!-- Turn-By-Turn Navigation Overlay (Top-Left, Google Maps style) -->
+          <div class="absolute top-4 left-4 z-20 bg-coldnavy-900/95 backdrop-blur-md border border-coldnavy-750 p-3.5 rounded-xl shadow-2xl max-w-xs space-y-2 pointer-events-none">
+            <div class="flex items-center gap-3">
+              <div id="nav-turn-icon-box" class="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-300 text-xl font-black">
+                ↑
+              </div>
+              <div>
+                <p class="text-[10px] text-slate-400 font-mono uppercase tracking-wider">Next Road Maneuver</p>
+                <h4 class="text-xs font-bold text-white leading-tight" id="nav-maneuver-text">Depart Central Cold Hub</h4>
+                <p class="text-[11px] text-cyan-400 font-mono font-semibold" id="nav-maneuver-dist">in 250 m • onto A1211</p>
+              </div>
+            </div>
+            <div class="pt-2 border-t border-coldnavy-800 flex items-center justify-between text-[10px] text-slate-300 font-mono">
+              <span id="nav-focus-vehicle-name" class="text-cyan-300 font-bold">Focus: CC-101 (Vaccines)</span>
+              <span class="text-emerald-400" id="nav-gps-satellites">12 GPS Satellites</span>
+            </div>
+          </div>
+
+          <!-- Route Colors Legend Overlay (Top-Right) -->
+          <div class="absolute top-4 right-4 z-20 bg-coldnavy-900/95 backdrop-blur-md border border-coldnavy-750 p-3 rounded-xl shadow-2xl space-y-2 text-xs pointer-events-none">
+            <p class="text-[10px] text-slate-400 uppercase font-mono font-bold">Road Corridors</p>
+            <div class="flex items-center gap-2">
+              <span class="w-3.5 h-1.5 rounded-full bg-cyan-400"></span>
+              <span class="font-mono text-[11px] text-slate-200">Cyan: CC-101 → Dest A (St. Thomas)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-3.5 h-1.5 rounded-full bg-blue-500"></span>
+              <span class="font-mono text-[11px] text-slate-200">Blue: CC-102 → Dest B (East Hub)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="w-3.5 h-1.5 rounded-full bg-rose-500"></span>
+              <span class="font-mono text-[11px] text-slate-200">Red: CC-103 → Dest C (Southwark)</span>
+            </div>
+          </div>
+
+          <!-- Bottom Live Telemetry Bar Overlay -->
+          <div class="absolute bottom-4 left-4 right-4 z-20 bg-coldnavy-900/90 backdrop-blur-md border border-coldnavy-750 px-4 py-2.5 rounded-xl shadow-2xl flex flex-wrap items-center justify-between gap-3 text-xs pointer-events-none">
+            <div class="flex items-center gap-4 text-slate-300 font-mono text-[11px]">
+              <span class="flex items-center gap-1.5 text-cyan-300 font-bold">
+                <i data-lucide="warehouse" class="w-4 h-4 text-cyan-400"></i> Dispatch Hub: London EC2
+              </span>
+              <span class="hidden sm:inline text-slate-600">•</span>
+              <span class="hidden sm:inline text-slate-300">Transit Mode: High-Reliability Road Segments</span>
+            </div>
+            <div class="flex items-center gap-3 text-[11px] font-mono">
+              <span class="text-slate-400">Telemetry Stream: <strong class="text-emerald-400">100% Synced</strong></span>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================================
+         TAB CONTENT: 1. SENSORS & TELEMETRY ANALYTICS
+         ======================================================== -->
+    <div id="section-telemetry" class="space-y-6">
+      
+      <!-- ========================================================
+           DEDICATED AI TELEMETRY CO-PILOT PANEL (INTEGRATED VIEW)
+           ======================================================== -->
+      <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 shadow-xl relative overflow-hidden space-y-4">
+        
+        <!-- Header with Co-Pilot Engine Status & Quick Controls -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between pb-3.5 border-b border-coldnavy-800 gap-3">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 via-teal-500 to-blue-600 p-0.5 shadow-lg shadow-cyan-500/20 flex items-center justify-center flex-shrink-0">
+              <div class="w-full h-full bg-coldnavy-950 rounded-[10px] flex items-center justify-center">
+                <i data-lucide="bot" class="w-5 h-5 text-cyan-400"></i>
+              </div>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm sm:text-base font-bold text-white tracking-tight flex items-center gap-2">
+                  <span>AI Telemetry Co-Pilot</span>
+                  <span id="telemetry-mode-badge" class="px-2 py-0.5 text-[10px] font-mono font-bold rounded-full bg-emerald-500/10 text-emerald-300 border border-emerald-500/40 animate-pulse">
+                    ⚡ AUTONOMOUS MODE ACTIVE
+                  </span>
+                </h3>
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Real-time IoT stream ingestion &bull; Multi-horizon excursion forecasting &bull; Sensor drift self-calibration
+              </p>
+            </div>
+          </div>
+
+          <!-- Active Mode Controls & Feedback Loop Indicators -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-coldnavy-950 border border-coldnavy-800 text-xs font-mono text-slate-300">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Kalman Drift: <strong class="text-emerald-400">&plusmn;0.04&deg;C</strong></span>
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-300 text-xs font-mono">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-purple-400"></i>
+              <span>Confidence: <strong id="telemetry-confidence-val">99.3%</strong></span>
+            </span>
+            <!-- Autonomous Execution Indicators (No manual gates) -->
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono">
+              <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+              <span>Zero-Touch Auto-Healing: <strong>ENGAGED</strong></span>
+            </span>
+            <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono">
+              <i data-lucide="zap" class="w-3.5 h-3.5 text-cyan-400"></i>
+              <span>Gating: <strong class="text-cyan-200">100% UNGATED</strong></span>
+            </span>
+            <button onclick="toggleThoughtDrawer()" class="px-3 py-1.5 rounded-lg bg-coldnavy-850 hover:bg-coldnavy-800 border border-cyan-500/30 text-cyan-300 hover:text-white transition flex items-center gap-1.5 text-xs font-mono cursor-pointer" title="Expand Full Cognitive Activity Drawer">
+              <i data-lucide="brain-circuit" class="w-3.5 h-3.5 text-cyan-400"></i>
+              <span>Full Activity Stream</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 3 Feature Columns inside Sensors AI Panel -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+          <!-- 1. PREDICTIVE EXCURSION FORECASTS (Cols 1-4) -->
+          <div class="lg:col-span-4 bg-coldnavy-950/70 border border-coldnavy-800 rounded-xl p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex items-center justify-between pb-2 border-b border-coldnavy-800/80">
+                <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <i data-lucide="trending-up" class="w-3.5 h-3.5 text-cyan-400"></i>
+                  Predictive Excursion Forecasts
+                </span>
+                <span class="text-[10px] font-mono text-cyan-400 bg-cyan-950/80 px-1.5 py-0.5 rounded border border-cyan-800">Horizon: +60m</span>
+              </div>
+              
+              <div class="mt-3 space-y-2.5 text-xs">
+                <!-- Forecast Item 1: Container C Thermal Spike -->
+                <div class="p-2.5 rounded-lg bg-rose-950/30 border border-rose-500/40 space-y-1">
+                  <div class="flex items-center justify-between font-mono">
+                    <span class="font-bold text-rose-300 flex items-center gap-1">
+                      <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                      Node CC3 (Seafood)
+                    </span>
+                    <span class="text-rose-400 font-bold">&uarr; +0.8&deg;C in 35m</span>
+                  </div>
+                  <p class="text-[11px] text-slate-300">
+                    Anticipated to reach <strong class="text-rose-400 font-mono">10.0&deg;C</strong> (Threshold: 8.0&deg;C). Historical ambient radiant load model predicts rapid thermal rise.
+                  </p>
+                </div>
+
+                <!-- Forecast Item 2: Container A Stability -->
+                <div class="p-2.5 rounded-lg bg-coldnavy-900 border border-coldnavy-800 space-y-1">
+                  <div class="flex items-center justify-between font-mono">
+                    <span class="font-bold text-cyan-300 flex items-center gap-1">
+                      <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                      Node CC1 (Vaccines)
+                    </span>
+                    <span class="text-emerald-400 font-bold">&plusmn;0.05&deg;C steady</span>
+                  </div>
+                  <p class="text-[11px] text-slate-400">
+                    Trajectory firmly inside 2.0&deg;C–8.0&deg;C margin. Thermal inertia buffers solar flux for next 4h.
+                  </p>
+                </div>
+
+                <!-- Forecast Item 3: Container B Steady -->
+                <div class="p-2.5 rounded-lg bg-coldnavy-900 border border-coldnavy-800 space-y-1">
+                  <div class="flex items-center justify-between font-mono">
+                    <span class="font-bold text-blue-300 flex items-center gap-1">
+                      <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                      Node CC2 (Dairy)
+                    </span>
+                    <span class="text-blue-300 font-bold">&darr; -0.1&deg;C cooling</span>
+                  </div>
+                  <p class="text-[11px] text-slate-400">
+                    Nominal pull-down cycle; predicted temperature at T+60m: 4.7&deg;C.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 2. COMPRESSOR & SENSOR HEALTH TRACKING (Cols 5-8) -->
+          <div class="lg:col-span-4 bg-coldnavy-950/70 border border-coldnavy-800 rounded-xl p-4 flex flex-col justify-between space-y-3">
+            <div>
+              <div class="flex items-center justify-between pb-2 border-b border-coldnavy-800/80">
+                <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <i data-lucide="activity" class="w-3.5 h-3.5 text-teal-400"></i>
+                  Compressor &amp; Sensor Health Tracking
+                </span>
+                <span class="text-[10px] font-mono text-teal-300 bg-teal-950/80 px-1.5 py-0.5 rounded border border-teal-800">3 Nodes Active</span>
+              </div>
+
+              <div class="mt-3 space-y-2.5 text-xs font-mono">
+                <!-- Node ESP32-CC1 -->
+                <div class="p-2.5 rounded-lg bg-coldnavy-900 border border-coldnavy-800 space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-white font-bold flex items-center gap-1.5">
+                      <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i> ESP32-CC1 (Vaccines)
+                    </span>
+                    <span class="px-1.5 py-0.2 rounded text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">HEALTHY</span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-1.5 text-[10px] text-slate-400 text-center">
+                    <div class="bg-coldnavy-950 p-1 rounded border border-coldnavy-800/80">
+                      <span class="block text-slate-500">RTD PT100</span>
+                      <span class="text-emerald-400 font-bold">&plusmn;0.02&deg;C drift</span>
+                    </div>
+                    <div class="bg-coldnavy-950 p-1 rounded border border-coldnavy-800/80">
+                      <span class="block text-slate-500">Comp. Wear</span>
+                      <span class="text-cyan-300 font-bold">1.12 mm/s</span>
+                    </div>
+                    <div class="bg-coldnavy-950 p-1 rounded border border-coldnavy-800/80">
+                      <span class="block text-slate-500">Battery</span>
+                      <span class="text-emerald-400 font-bold">82% (Nominal)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Node ESP32-CC2 -->
+                <div class="p-2.5 rounded-lg bg-coldnavy-900 border border-coldnavy-800 space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-white font-bold flex items-center gap-1.5">
+                      <i data-lucide="cpu" class="w-3.5 h-3.5 text-blue-400"></i> ESP32-CC2 (Dairy)
+                    </span>
+                    <span class="px-1.5 py-0.2 rounded text-[10px] bg-blue-500/10 text-blue-300 border border-blue-500/30">OPTIMAL</span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-1.5 text-[10px] text-slate-400 text-center">
+                    <div class="bg-coldnavy-950 p-1 rounded border border-coldnavy-800/80">
+                      <span class="block text-slate-500">DHT22 Sens.</span>
+                      <span class="text-blue-300 font-bold">99.8% Sync</span>
+                    </div>
+                    <div class="bg-coldnavy-950 p-1 rounded border border-coldnavy-800/80">
+                      <span class="block text-slate-500">Comp. Wear</span>
+                      <span class="text-cyan-300 font-bold">1.45 mm/s</span>
+                    </div>
+                    <div class="bg-coldnavy-950 p-1 rounded border border-coldnavy-800/80">
+                      <span class="block text-slate-500">Battery</span>
+                      <span class="text-emerald-400 font-bold">89% (Nominal)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Node ESP32-CC3 -->
+                <div class="p-2.5 rounded-lg bg-rose-950/20 border border-rose-500/40 space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-rose-200 font-bold flex items-center gap-1.5">
+                      <i data-lucide="cpu" class="w-3.5 h-3.5 text-rose-400"></i> ESP32-CC3 (Seafood)
+                    </span>
+                    <span class="px-1.5 py-0.2 rounded text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse">WEAR FAULT</span>
+                  </div>
+                  <div class="grid grid-cols-3 gap-1.5 text-[10px] text-slate-400 text-center">
+                    <div class="bg-coldnavy-950 p-1 rounded border border-rose-500/30">
+                      <span class="block text-slate-500">DS18B20</span>
+                      <span class="text-amber-400 font-bold">&plusmn;0.14&deg;C lag</span>
+                    </div>
+                    <div class="bg-coldnavy-950 p-1 rounded border border-rose-500/30">
+                      <span class="block text-slate-500">Comp. Wear</span>
+                      <span class="text-rose-400 font-bold">2.95 mm/s ⚠</span>
+                    </div>
+                    <div class="bg-coldnavy-950 p-1 rounded border border-rose-500/30">
+                      <span class="block text-slate-500">Battery</span>
+                      <span class="text-amber-400 font-bold">61% (Low)</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 3. AUTONOMOUS REAL-TIME OPTIMIZATIONS & HISTORICAL FEED (Cols 9-12) -->
+          <div class="lg:col-span-4 bg-coldnavy-950/70 border border-coldnavy-800 rounded-xl p-4 flex flex-col justify-between space-y-3">
+            <!-- Top: Autonomous Real-Time Optimizations -->
+            <div>
+              <div class="flex items-center justify-between pb-2 border-b border-coldnavy-800/80">
+                <span class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                  <i data-lucide="zap" class="w-3.5 h-3.5 text-emerald-400"></i>
+                  Autonomous Optimizations
+                </span>
+                <span class="text-[10px] font-mono text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800 animate-pulse">
+                  AUTO-EXECUTED
+                </span>
+              </div>
+
+              <div class="mt-2.5 space-y-2 text-xs" id="telemetry-auto-optimizations-container">
+                <!-- Auto-Applied Action 1: CC-103 Cooling Setpoint -->
+                <div id="ai-sugg-box-1" class="p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-500/40 space-y-1.5 transition-all">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-emerald-300 flex items-center gap-1">
+                      <i data-lucide="check-circle" class="w-3.5 h-3.5 text-emerald-400"></i>
+                      AI Auto-Applied: Cooling Boost (CC-103)
+                    </span>
+                    <span class="text-[9px] font-mono font-bold bg-emerald-900/60 text-emerald-300 px-1.5 py-0.5 rounded border border-emerald-600/40">ENACTED</span>
+                  </div>
+                  <p class="text-[11px] text-slate-300">
+                    Tightened cooling setpoint to <strong class="text-emerald-300 font-mono">6.5&deg;C</strong> (-1.5&deg;C delta) instantly upon detecting thermal drift.
+                  </p>
+                  <div class="text-[10px] text-slate-400 font-mono flex items-center justify-between pt-1 border-t border-emerald-900/40">
+                    <span>Target: 6.5°C setpoint</span>
+                    <span class="text-emerald-400 font-bold">Execution: 0ms delay</span>
+                  </div>
+                </div>
+
+                <!-- Auto-Applied Action 2: CC-101 Cryo-Loop Modulation -->
+                <div id="ai-sugg-box-2" class="p-2.5 rounded-lg bg-coldnavy-900 border border-cyan-500/30 space-y-1.5">
+                  <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-bold text-cyan-300 flex items-center gap-1">
+                      <i data-lucide="check-circle" class="w-3.5 h-3.5 text-cyan-400"></i>
+                      AI Auto-Applied: Cryo-Loop Modulation (-3.5°C)
+                    </span>
+                    <span class="text-[9px] font-mono font-bold bg-cyan-950 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-700/50">ACTIVE</span>
+                  </div>
+                  <p class="text-[11px] text-slate-300">
+                    Pre-emptive secondary cooling loop engaged for Node ESP32-CC1 to mitigate corridor solar irradiance.
+                  </p>
+                  <div class="text-[10px] text-slate-400 font-mono flex items-center justify-between pt-1 border-t border-coldnavy-800">
+                    <span>Power Draw: +2.1 kW</span>
+                    <span class="text-cyan-400 font-bold">Success &bull; Synced</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Bottom: Compact AI Thought Stream / Historical Feedback Feed -->
+            <div class="pt-2 border-t border-coldnavy-800/80">
+              <div class="flex items-center justify-between mb-1.5">
+                <span class="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1 font-mono">
+                  <span class="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                  Self-Correction Feedback Loop
+                </span>
+                <span class="text-[10px] text-slate-500 font-mono">MAPE: 1.12%</span>
+              </div>
+              <div id="telemetry-ai-mini-stream" class="h-24 overflow-y-auto custom-scrollbar space-y-1.5 font-mono text-[10px] text-slate-300 pr-1">
+                <div class="p-1.5 rounded bg-coldnavy-900/80 border border-cyan-900/40">
+                  <span class="text-cyan-400 font-bold">[KALMAN FILTER]:</span> Residual variance -0.09&deg;C detected over last 60 mins; gain updated to &beta;=0.984.
+                </div>
+                <div class="p-1.5 rounded bg-coldnavy-900/80 border border-purple-900/40">
+                  <span class="text-purple-400 font-bold">[SELF-CORRECTION]:</span> Compared T-2h prediction against actual sensor telemetry: error &plusmn;0.12&deg;C. Model calibrated.
+                </div>
+                <div class="p-1.5 rounded bg-coldnavy-900/80 border border-amber-900/40">
+                  <span class="text-amber-400 font-bold">[HYSTERESIS TUNING]:</span> Expanded door-opening alert window by +45s based on 3 false-positive history logs.
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- ====================================================
+           AI TELEMETRY INSIGHTS & ACTION STREAM (Collapsible)
+           ==================================================== -->
+      <div id="ai-action-stream-card" class="bg-coldnavy-900 border border-cyan-500/20 rounded-2xl shadow-xl overflow-hidden transition-all duration-300">
+        <!-- Header / Toggle Bar -->
+        <div class="flex items-center justify-between px-5 py-3 cursor-pointer border-b border-coldnavy-800 select-none" onclick="toggleActionStream()">
+          <div class="flex items-center gap-2.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span class="text-xs font-bold text-white uppercase tracking-widest font-mono">AI Telemetry Insights &amp; Action Stream</span>
+            <span id="action-stream-count" class="px-1.5 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] font-mono font-bold border border-cyan-500/30">0 actions</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="clearActionStream(event)" class="px-2.5 py-1 text-[10px] font-mono rounded bg-coldnavy-950 hover:bg-coldnavy-800 border border-coldnavy-700 text-slate-400 hover:text-white transition cursor-pointer">Clear Log</button>
+            <span id="action-stream-chevron" class="text-cyan-400 transition-transform duration-300">
+              <i data-lucide="chevron-down" class="w-4 h-4"></i>
+            </span>
+          </div>
+        </div>
+        <!-- Scrollable Log Body (collapsed by default, expands after first action) -->
+        <div id="action-stream-body" class="max-h-0 overflow-hidden transition-all duration-500 ease-in-out">
+          <div id="action-stream-log" class="h-44 overflow-y-auto custom-scrollbar space-y-1.5 p-4 font-mono text-[10px] text-slate-300">
+            <div class="flex items-center justify-center h-full text-slate-600 italic text-xs">
+              <span>Autonomous AI engine initializing… Actions will appear here in real time.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sensor Status Cards (3 Containers) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        
+        <!-- Container CC-101 (Vaccines) -->
+        <div id="card-cc101" class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 shadow-xl relative transition-shadow duration-300">
+          <div class="flex items-center justify-between pb-3 border-b border-coldnavy-800">
+            <div>
+              <h3 class="font-bold text-white text-sm">Container A: Vaccines</h3>
+              <p class="text-[11px] text-slate-400 font-mono">Node ESP32-CC1 • CC-101</p>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              SAFE (2°C–8°C)
+            </span>
+          </div>
+          <!-- AI Activity Badge (shown by autopilot engine) -->
+          <div id="ai-badge-cc101" class="hidden absolute top-3 right-3 z-10">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 animate-pulse">
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>AI OPTIMIZING
+            </span>
+          </div>
+          <div class="mt-4 grid grid-cols-2 gap-3">
+            <div class="p-3 bg-coldnavy-950 rounded-xl border border-coldnavy-800 text-center">
+              <span class="text-[10px] text-slate-400 block uppercase font-semibold">Temperature</span>
+              <span class="text-2xl font-black text-emerald-400 font-mono mt-1 block" id="disp-live-temp-CC-101">4.2°C</span>
+              <span class="text-[10px] text-slate-500 font-mono">RTD PT100</span>
+            </div>
+            <div class="p-3 bg-coldnavy-950 rounded-xl border border-coldnavy-800 text-center">
+              <span class="text-[10px] text-slate-400 block uppercase font-semibold">Humidity</span>
+              <span class="text-2xl font-black text-cyan-400 font-mono mt-1 block" id="disp-live-hum-CC-101">62% RH</span>
+              <span class="text-[10px] text-slate-500 font-mono">SHT31 Sensor</span>
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-coldnavy-800 flex justify-between text-xs text-slate-400 font-mono">
+            <span>Battery: <strong class="text-emerald-400">82%</strong></span>
+            <span>Door: <strong class="text-teal-300">Secure (Closed)</strong></span>
+          </div>
+        </div>
+
+        <!-- Container CC-102 (Dairy) -->
+        <div id="card-cc102" class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 shadow-xl relative transition-shadow duration-300">
+          <div class="flex items-center justify-between pb-3 border-b border-coldnavy-800">
+            <div>
+              <h3 class="font-bold text-white text-sm">Container B: Dairy Products</h3>
+              <p class="text-[11px] text-slate-400 font-mono">Node ESP32-CC2 • CC-102</p>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+              SAFE (2°C–8°C)
+            </span>
+          </div>
+          <!-- AI Activity Badge -->
+          <div id="ai-badge-cc102" class="hidden absolute top-3 right-3 z-10">
+            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-400/50 animate-pulse">
+              <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>AI OPTIMIZING
+            </span>
+          </div>
+          <div class="mt-4 grid grid-cols-2 gap-3">
+            <div class="p-3 bg-coldnavy-950 rounded-xl border border-coldnavy-800 text-center">
+              <span class="text-[10px] text-slate-400 block uppercase font-semibold">Temperature</span>
+              <span class="text-2xl font-black text-emerald-400 font-mono mt-1 block" id="disp-live-temp-CC-102">4.8°C</span>
+              <span class="text-[10px] text-slate-500 font-mono">DS18B20 Digital</span>
+            </div>
+            <div class="p-3 bg-coldnavy-950 rounded-xl border border-coldnavy-800 text-center">
+              <span class="text-[10px] text-slate-400 block uppercase font-semibold">Humidity</span>
+              <span class="text-2xl font-black text-cyan-400 font-mono mt-1 block" id="disp-live-hum-CC-102">65% RH</span>
+              <span class="text-[10px] text-slate-500 font-mono">DHT22 Precision</span>
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-coldnavy-800 flex justify-between text-xs text-slate-400 font-mono">
+            <span>Battery: <strong class="text-emerald-400">89%</strong></span>
+            <span>Door: <strong class="text-teal-300">Secure (Closed)</strong></span>
+          </div>
+        </div>
+
+        <!-- Container CC-103 (Seafood - Critical Alert) -->
+        <div class="bg-coldnavy-900 border-2 border-rose-500/60 rounded-2xl p-5 shadow-xl relative bg-rose-950/20">
+          <div class="flex items-center justify-between pb-3 border-b border-rose-500/30">
+            <div>
+              <h3 class="font-bold text-white text-sm">Container C: Seafood</h3>
+              <p class="text-[11px] text-rose-300 font-mono">Node ESP32-CC3 • CC-103</p>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-500/20 text-rose-300 border border-rose-500/40 animate-pulse" id="badge-c-alert">
+              SPOILAGE ALERT
+            </span>
+          </div>
+          <div class="mt-4 grid grid-cols-2 gap-3">
+            <div class="p-3 bg-coldnavy-950 rounded-xl border border-rose-500/40 text-center">
+              <span class="text-[10px] text-rose-300 block uppercase font-semibold">Temperature</span>
+              <span class="text-2xl font-black text-rose-400 font-mono mt-1 block animate-pulse" id="disp-live-temp-CC-103">9.2°C</span>
+              <span class="text-[10px] text-rose-400/80 font-mono">+1.2°C Breach!</span>
+            </div>
+            <div class="p-3 bg-coldnavy-950 rounded-xl border border-coldnavy-800 text-center">
+              <span class="text-[10px] text-slate-400 block uppercase font-semibold">Humidity</span>
+              <span class="text-2xl font-black text-amber-300 font-mono mt-1 block" id="disp-live-hum-CC-103">74% RH</span>
+              <span class="text-[10px] text-amber-400/80 font-mono">High Humidity</span>
+            </div>
+          </div>
+          <div class="mt-3 pt-3 border-t border-rose-500/30 flex justify-between text-xs text-slate-300 font-mono">
+            <span>Battery: <strong class="text-amber-400">61%</strong></span>
+            <span>Compressor: <strong class="text-rose-400 animate-pulse" id="label-compressor-state">Fault (Degraded)</strong></span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Historical Graphs (Temp & Humidity Charts) -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Temperature History Graph -->
+        <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 shadow-xl">
+          <div class="flex items-center justify-between pb-3 border-b border-coldnavy-800">
+            <div>
+              <h3 class="font-bold text-white text-base flex items-center gap-2">
+                <i data-lucide="line-chart" class="w-4 h-4 text-cyan-400"></i>
+                Temperature History &amp; Thresholds
+              </h3>
+              <p class="text-xs text-slate-400">Real-time thermal trajectory across cold transit corridors</p>
+            </div>
+            <div class="flex items-center gap-1.5 bg-coldnavy-950 border border-coldnavy-750 p-1 rounded-lg text-xs">
+              <button onclick="setChartRange('live')" class="px-2 py-0.5 rounded font-mono font-bold text-cyan-300 bg-coldnavy-800">Live</button>
+              <button onclick="setChartRange('hourly')" class="px-2 py-0.5 rounded font-mono text-slate-400 hover:text-white">Hourly</button>
+              <button onclick="setChartRange('daily')" class="px-2 py-0.5 rounded font-mono text-slate-400 hover:text-white">Daily</button>
+            </div>
+          </div>
+          <div class="mt-4 h-64 w-full">
+            <canvas id="tempAnalyticsChart"></canvas>
+          </div>
+          <div class="mt-3 pt-2.5 border-t border-coldnavy-800 text-xs text-slate-400 flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Excursion threshold line &gt; 8.0°C (46.4°F)
+            </span>
+            <span class="font-mono text-cyan-300">Rate: 1 reading / sec</span>
+          </div>
+        </div>
+
+        <!-- Humidity History Graph -->
+        <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 shadow-xl">
+          <div class="flex items-center justify-between pb-3 border-b border-coldnavy-800">
+            <div>
+              <h3 class="font-bold text-white text-base flex items-center gap-2">
+                <i data-lucide="droplets" class="w-4 h-4 text-cyan-400"></i>
+                Humidity History &amp; Moisture Control
+              </h3>
+              <p class="text-xs text-slate-400">Relative humidity % RH stream</p>
+            </div>
+            <span class="text-xs font-mono text-cyan-300 bg-cyan-500/10 px-2.5 py-1 rounded-lg border border-cyan-500/30">
+              Safe Target: 40% – 70% RH
+            </span>
+          </div>
+          <div class="mt-4 h-64 w-full">
+            <canvas id="humidityAnalyticsChart"></canvas>
+          </div>
+          <div class="mt-3 pt-2.5 border-t border-coldnavy-800 text-xs text-slate-400 flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span> Live hygrometer sampling
+            </span>
+            <span class="font-mono text-emerald-400">Condensation Risk: Minimal</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================================
+         TAB CONTENT: 3. SPOILAGE PREVENTION & ALERTS CENTER
+         ======================================================== -->
+    <div id="section-alerts" class="space-y-6 hidden">
+      
+      <!-- Critical Excursion Incident Action Card -->
+      <div id="alert-incident-panel" class="bg-gradient-to-br from-rose-950/90 via-coldnavy-900 to-coldnavy-950 border-2 border-rose-500/70 rounded-2xl p-6 shadow-2xl relative overflow-hidden">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-rose-500/30">
+          <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl bg-rose-500/20 border border-rose-500/50 flex items-center justify-center text-rose-400">
+              <i data-lucide="alert-octagon" class="w-6 h-6 animate-pulse"></i>
+            </div>
+            <div>
+              <h3 class="text-base sm:text-lg font-black text-rose-300 uppercase tracking-wide">
+                CRITICAL TEMPERATURE EXCURSION DETECTED
+              </h3>
+              <p class="text-xs text-rose-400/80 font-mono mt-0.5">
+                Immediate Intervention Required • Spoilage Prevention Active
+              </p>
+            </div>
+          </div>
+          <span class="px-3 py-1 rounded-full text-xs font-black bg-rose-500/20 text-rose-300 border border-rose-500/40 uppercase tracking-wider animate-pulse text-center">
+            BREACH ACTIVE (+1.2°C OVER 8°C)
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5 text-xs">
+          <div class="p-3 bg-coldnavy-950/90 rounded-xl border border-rose-500/30">
+            <span class="text-slate-400 block text-[11px]">Shipment &amp; Cargo</span>
+            <span class="text-sm font-bold text-white font-mono mt-1 block">CC-103 (Seafood Cargo)</span>
+          </div>
+          <div class="p-3 bg-coldnavy-950/90 rounded-xl border border-rose-500/30">
+            <span class="text-slate-400 block text-[11px]">Current Temperature</span>
+            <span class="text-lg font-black text-rose-400 font-mono mt-0.5 block" id="alert-card-temp">9.2°C (48.6°F)</span>
+          </div>
+          <div class="p-3 bg-coldnavy-950/90 rounded-xl border border-rose-500/30">
+            <span class="text-slate-400 block text-[11px]">Threshold Limit</span>
+            <span class="text-sm font-bold text-slate-200 font-mono mt-1 block">Max 8.0°C (46.4°F)</span>
+          </div>
+          <div class="p-3 bg-coldnavy-950/90 rounded-xl border border-rose-500/30">
+            <span class="text-slate-400 block text-[11px]">Driver In Charge</span>
+            <span class="text-sm font-bold text-amber-300 font-mono mt-1 block">Arjun Kumar (+44 7700 900123)</span>
+          </div>
+        </div>
+
+        <!-- Actionable Buttons -->
+        <div class="mt-6 pt-4 border-t border-rose-500/30 flex flex-wrap items-center gap-3">
+          <!-- Remote Cooling Adjustment -->
+          <button onclick="triggerRemoteCooling()" 
+                  class="flex items-center gap-2 px-5 py-2.5 text-xs font-extrabold rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-coldnavy-950 transition shadow-lg shadow-cyan-500/30 cursor-pointer">
+            <i data-lucide="snowflake" class="w-4 h-4"></i>
+            <span id="btn-cooling-text">Trigger Remote Cooling Adjustment</span>
+          </button>
+
+          <!-- Notify Driver -->
+          <button onclick="notifyDriverModal('CC-103')" 
+                  class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl bg-coldnavy-850 hover:bg-coldnavy-800 text-amber-300 border border-amber-500/40 hover:border-amber-300 transition cursor-pointer">
+            <i data-lucide="phone-call" class="w-4 h-4"></i>
+            <span>Notify Driver via Telematics</span>
+          </button>
+
+          <!-- Acknowledge Alert -->
+          <button onclick="acknowledgeAlert()" 
+                  class="flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl bg-rose-600 hover:bg-rose-500 text-white transition cursor-pointer">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span id="btn-ack-alert-label">Acknowledge Alert</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Real-Time Alert Event Feed -->
+      <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 sm:p-6 shadow-xl">
+        <div class="flex items-center justify-between pb-4 border-b border-coldnavy-800">
+          <div class="flex items-center gap-2">
+            <i data-lucide="bell" class="w-5 h-5 text-rose-400"></i>
+            <h3 class="font-bold text-white text-base tracking-tight">Threshold Breach &amp; Incident Feed</h3>
+          </div>
+          <span class="text-xs font-mono text-slate-400">Live IoT Audit Stream</span>
+        </div>
+
+        <div class="mt-4 space-y-3" id="alert-feed-list">
+          <!-- Feed items injected dynamically -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================================
+         TAB CONTENT: 4. REGULATORY COMPLIANCE & AUDIT LOGS
+         ======================================================== -->
+    <div id="section-compliance" class="space-y-6 hidden">
+      
+      <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 sm:p-6 shadow-xl">
+        <div class="flex flex-col md:flex-row md:items-center justify-between pb-4 border-b border-coldnavy-800 gap-4">
+          <div>
+            <h3 class="font-bold text-white text-base flex items-center gap-2">
+              <i data-lucide="shield-check" class="w-5 h-5 text-teal-400"></i>
+              Regulatory Compliance &amp; Historical Audit Trail
+            </h3>
+            <p class="text-xs text-slate-400 mt-0.5">
+              FDA 21 CFR Part 11 &amp; WHO Good Distribution Practices (GDP) Compliant Logs
+            </p>
+          </div>
+
+          <!-- Export Action Buttons -->
+          <div class="flex items-center gap-3">
+            <button onclick="exportCSV()" class="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-coldnavy-850 hover:bg-coldnavy-800 text-cyan-300 border border-cyan-500/30 hover:border-cyan-400 transition cursor-pointer">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i>
+              <span>Export CSV</span>
+            </button>
+            <button onclick="exportPDFAuditReport()" class="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-cyan-600 to-teal-500 hover:from-cyan-500 hover:to-teal-400 text-coldnavy-950 transition cursor-pointer">
+              <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+              <span>Export PDF Audit Report</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filter Controls -->
+        <div class="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <input type="text" id="log-search-input" onkeyup="filterAuditLogs()" placeholder="Search logs by Container, Node or Status..." 
+                   class="bg-coldnavy-950 border border-coldnavy-750 rounded-xl px-3.5 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-400 w-full sm:w-72" />
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-slate-400">Status Filter:</span>
+            <select id="log-filter-select" onchange="filterAuditLogs()" class="bg-coldnavy-950 border border-coldnavy-750 text-xs font-semibold text-cyan-300 rounded-xl px-3 py-1.5 focus:outline-none focus:border-cyan-400">
+              <option value="ALL">All Events</option>
+              <option value="SAFE">Safe Compliant</option>
+              <option value="ALERT">Breach Excursions</option>
+              <option value="DELIVERED">Delivered</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Audit Table -->
+        <div class="mt-4 overflow-x-auto">
+          <table class="w-full text-left text-xs whitespace-nowrap">
+            <thead>
+              <tr class="text-slate-400 uppercase tracking-wider text-[11px] border-b border-coldnavy-800 bg-coldnavy-950/70">
+                <th class="px-4 py-3 font-bold">Timestamp (UTC)</th>
+                <th class="px-4 py-3 font-bold">Container ID</th>
+                <th class="px-4 py-3 font-bold">Data Channel</th>
+                <th class="px-4 py-3 font-bold">Cargo Type</th>
+                <th class="px-4 py-3 font-bold">Temperature</th>
+                <th class="px-4 py-3 font-bold">Humidity</th>
+                <th class="px-4 py-3 font-bold">GPS Coordinates</th>
+                <th class="px-4 py-3 font-bold">Integrity Status</th>
+              </tr>
+            </thead>
+            <tbody id="audit-table-body" class="divide-y divide-coldnavy-800/80 font-medium">
+              <!-- Logs populated dynamically -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================================
+         TAB CONTENT: 5. SETTINGS & SYSTEM CONFIGURATION
+         ======================================================== -->
+    <div id="section-settings" class="space-y-6 hidden">
+
+      <!-- Settings Page Header -->
+      <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <span class="p-2 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+              <i data-lucide="settings" class="w-5 h-5"></i>
+            </span>
+            <h2 class="text-lg sm:text-xl font-extrabold text-white tracking-tight">
+              Smart Cold Chain - Settings
+            </h2>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">
+            Configure Environmental Thresholds, Alerts, Telemetry, and System Preferences
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2.5 flex-wrap">
+          <a href="settings.html" target="_blank" class="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold rounded-xl bg-coldnavy-850 hover:bg-coldnavy-800 text-cyan-300 border border-cyan-500/30 transition cursor-pointer">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            <span>Open Standalone Page</span>
+          </a>
+          <button type="button" onclick="handleDashboardResetSettings()" class="px-3.5 py-2 text-xs font-semibold rounded-xl bg-coldnavy-850 hover:bg-coldnavy-800 text-slate-300 border border-coldnavy-750 transition cursor-pointer">
+            ↺ Reset
+          </button>
+          <button type="button" onclick="handleDashboardSaveSettings()" class="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-coldnavy-950 transition shadow-lg shadow-cyan-500/20 cursor-pointer">
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>Save Settings</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 5-Card Settings Grid Container -->
+      <form id="dashboardSettingsForm" onsubmit="event.preventDefault(); handleDashboardSaveSettings();" class="space-y-6">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          
+          <!-- Card 1: Environmental & Operational Threshold Settings -->
+          <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl overflow-hidden shadow-xl">
+            <div class="px-5 py-3.5 border-b border-coldnavy-800 bg-coldnavy-950/40 flex items-center gap-2 font-semibold text-sm text-white">
+              <span>🌡️</span>
+              <span>Environmental &amp; Operational Thresholds</span>
+            </div>
+            <div class="p-5 space-y-3.5 text-xs">
+              <div class="flex items-center justify-between py-1 border-b border-coldnavy-800/60">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">Pharmaceuticals Min Limit</div>
+                  <div class="text-[11px] text-slate-400">Lower temperature limit (<span class="unit-label">°C</span>)</div>
+                </div>
+                <input type="number" id="dash_pharma_min" value="2.0" step="0.1" class="w-24 bg-coldnavy-950 border border-coldnavy-750 text-cyan-300 font-mono text-right rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400" />
+              </div>
+              <div class="flex items-center justify-between py-1 border-b border-coldnavy-800/60">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">Pharmaceuticals Max Limit</div>
+                  <div class="text-[11px] text-slate-400">Upper temperature limit (<span class="unit-label">°C</span>)</div>
+                </div>
+                <input type="number" id="dash_pharma_max" value="8.0" step="0.1" class="w-24 bg-coldnavy-950 border border-coldnavy-750 text-cyan-300 font-mono text-right rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400" />
+              </div>
+              <div class="flex items-center justify-between py-1 border-b border-coldnavy-800/60">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">Perishable Produce Limit</div>
+                  <div class="text-[11px] text-slate-400">Acceptable range 1°C to 7°C</div>
+                </div>
+                <input type="number" id="dash_produce_limit" value="7.0" step="0.1" class="w-24 bg-coldnavy-950 border border-coldnavy-750 text-cyan-300 font-mono text-right rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400" />
+              </div>
+              <div class="flex items-center justify-between py-1 border-b border-coldnavy-800/60">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">Frozen Goods Threshold</div>
+                  <div class="text-[11px] text-slate-400">Maximum limit (&lt;= -18°C)</div>
+                </div>
+                <input type="number" id="dash_frozen_limit" value="-18.0" step="0.1" class="w-24 bg-coldnavy-950 border border-coldnavy-750 text-cyan-300 font-mono text-right rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400" />
+              </div>
+              <div class="flex items-center justify-between py-1 border-b border-coldnavy-800/60">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">Excursion Duration Limit</div>
+                  <div class="text-[11px] text-slate-400">Trigger alarm after allowed minutes</div>
+                </div>
+                <input type="number" id="dash_excursion_duration" value="45" class="w-24 bg-coldnavy-950 border border-coldnavy-750 text-cyan-300 font-mono text-right rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400" />
+              </div>
+              <div class="flex items-center justify-between py-1">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">Defrost &amp; Maintenance Modes</div>
+                  <div class="text-[11px] text-slate-400">Enable software operational pauses</div>
+                </div>
+                <label class="switch"><input type="checkbox" id="dash_defrost_mode" checked><span class="slider"></span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 2: Notification & Alert Escalation Rules -->
+          <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl overflow-hidden shadow-xl">
+            <div class="px-5 py-3.5 border-b border-coldnavy-800 bg-coldnavy-950/40 flex items-center gap-2 font-semibold text-sm text-white">
+              <span>🔔</span>
+              <span>Notification &amp; Alert Rules</span>
+            </div>
+            <div class="p-5 space-y-3.5 text-xs">
+              <div class="flex items-center justify-between py-1 border-b border-coldnavy-800/60">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">Warning Severity Tier</div>
+                  <div class="text-[11px] text-slate-400">Initial notification tier</div>
+                </div>
+                <label class="switch"><input type="checkbox" id="dash_tier_warning" checked><span class="slider"></span></label>
+              </div>
+              <div class="flex items-center justify-between py-1 border-b border-coldnavy-800/60">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">Critical Severity Tier</div>
+                  <div class="text-[11px] text-slate-400">Escalated notification tier</div>
+                </div>
+                <label class="switch"><input type="checkbox" id="dash_tier_critical" checked><span class="slider"></span></label>
+              </div>
+              <div class="flex items-center justify-between py-1 border-b border-coldnavy-800/60">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">Emergency Tier &amp; Webhooks</div>
+                  <div class="text-[11px] text-slate-400">Dispatch to operators &amp; coordinators</div>
+                </div>
+                <label class="switch"><input type="checkbox" id="dash_tier_emergency" checked><span class="slider"></span></label>
+              </div>
+              <div class="flex items-center justify-between py-1">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">Escalation Timer</div>
+                  <div class="text-[11px] text-slate-400">Delay before auto-escalation (mins)</div>
+                </div>
+                <input type="number" id="dash_escalation_timer" value="15" class="w-24 bg-coldnavy-950 border border-coldnavy-750 text-cyan-300 font-mono text-right rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 3: Telemetry & Data Management Settings -->
+          <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl overflow-hidden shadow-xl">
+            <div class="px-5 py-3.5 border-b border-coldnavy-800 bg-coldnavy-950/40 flex items-center gap-2 font-semibold text-sm text-white">
+              <span>📊</span>
+              <span>Telemetry &amp; Data Management</span>
+            </div>
+            <div class="p-5 space-y-3.5 text-xs">
+              <div class="flex items-center justify-between py-1 border-b border-coldnavy-800/60">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">Transit Polling Interval</div>
+                  <div class="text-[11px] text-slate-400">High-frequency update interval</div>
+                </div>
+                <select id="dash_transit_polling" class="bg-coldnavy-950 border border-coldnavy-750 text-cyan-300 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400">
+                  <option value="5">5 Minutes</option>
+                  <option value="10">10 Minutes</option>
+                </select>
+              </div>
+              <div class="flex items-center justify-between py-1 border-b border-coldnavy-800/60">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">Idle Polling Interval</div>
+                  <div class="text-[11px] text-slate-400">Low-frequency update interval</div>
+                </div>
+                <select id="dash_idle_polling" class="bg-coldnavy-950 border border-coldnavy-750 text-cyan-300 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400">
+                  <option value="60">60 Minutes</option>
+                  <option value="30">30 Minutes</option>
+                </select>
+              </div>
+              <div class="flex items-center justify-between py-1 border-b border-coldnavy-800/60">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">Offline Data Synchronization</div>
+                  <div class="text-[11px] text-slate-400">Buffer and batch-sync on reconnect</div>
+                </div>
+                <label class="switch"><input type="checkbox" id="dash_offline_sync" checked><span class="slider"></span></label>
+              </div>
+              <div class="flex items-center justify-between py-1">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">Data Retention Period</div>
+                  <div class="text-[11px] text-slate-400">Days before archive transfer</div>
+                </div>
+                <input type="number" id="dash_data_retention" value="365" class="w-24 bg-coldnavy-950 border border-coldnavy-750 text-cyan-300 font-mono text-right rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400" />
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 4: User Access & Role-Based Permissions (RBAC) -->
+          <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl overflow-hidden shadow-xl">
+            <div class="px-5 py-3.5 border-b border-coldnavy-800 bg-coldnavy-950/40 flex items-center gap-2 font-semibold text-sm text-white">
+              <span>👥</span>
+              <span>User Access &amp; RBAC</span>
+            </div>
+            <div class="p-5 space-y-3.5 text-xs">
+              <div class="flex items-center justify-between py-1 border-b border-coldnavy-800/60">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">Default Role Assignment</div>
+                  <div class="text-[11px] text-slate-400">Set default permission tier</div>
+                </div>
+                <select id="dash_default_role" class="bg-coldnavy-950 border border-coldnavy-750 text-cyan-300 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400">
+                  <option value="Fleet Manager">Fleet Manager</option>
+                  <option value="Administrator">Administrator</option>
+                  <option value="Auditor">Auditor</option>
+                  <option value="View-Only Guest">View-Only Guest</option>
+                </select>
+              </div>
+              <div class="flex items-center justify-between py-1">
+                <div class="pr-3">
+                  <div class="font-semibold text-slate-200">System-Wide Audit Logging</div>
+                  <div class="text-[11px] text-slate-400">Track user actions and overrides</div>
+                </div>
+                <label class="switch"><input type="checkbox" id="dash_audit_logging" checked><span class="slider"></span></label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card 5: System & Localization Preferences (Spans 2 columns) -->
+          <div class="lg:col-span-2 bg-coldnavy-900 border border-coldnavy-800 rounded-2xl overflow-hidden shadow-xl">
+            <div class="px-5 py-3.5 border-b border-coldnavy-800 bg-coldnavy-950/40 flex items-center gap-2 font-semibold text-sm text-white">
+              <span>🌍</span>
+              <span>System &amp; Localization Preferences</span>
+            </div>
+            <div class="p-5">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs">
+                <div class="space-y-3.5">
+                  <div class="flex items-center justify-between py-1 border-b border-coldnavy-800/60">
+                    <div class="pr-3">
+                      <div class="font-semibold text-slate-200">Temperature Unit</div>
+                      <div class="text-[11px] text-slate-400">Default unit system across fleet</div>
+                    </div>
+                    <select id="dash_temp_unit" onchange="setTempUnit(this.value)" class="bg-coldnavy-950 border border-coldnavy-750 text-cyan-300 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400">
+                      <option value="C">Celsius (°C)</option>
+                      <option value="F">Fahrenheit (°F)</option>
+                    </select>
+                  </div>
+                  <div class="flex items-center justify-between py-1">
+                    <div class="pr-3">
+                      <div class="font-semibold text-slate-200">Distance Unit</div>
+                      <div class="text-[11px] text-slate-400">Road measurement metrics</div>
+                    </div>
+                    <select id="dash_dist_unit" class="bg-coldnavy-950 border border-coldnavy-750 text-cyan-300 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400">
+                      <option value="km">Kilometers</option>
+                      <option value="mi">Miles</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="space-y-3.5">
+                  <div class="flex items-center justify-between py-1 border-b border-coldnavy-800/60">
+                    <div class="pr-3">
+                      <div class="font-semibold text-slate-200">Timezone Synchronization</div>
+                      <div class="text-[11px] text-slate-400">Cross-border UTC rules</div>
+                    </div>
+                    <select id="dash_timezone_sync" class="bg-coldnavy-950 border border-coldnavy-750 text-cyan-300 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-cyan-400">
+                      <option value="UTC">UTC (Coordinated)</option>
+                      <option value="Local">Local Time</option>
+                    </select>
+                  </div>
+                  <div class="flex items-center justify-between py-1">
+                    <div class="pr-3">
+                      <div class="font-semibold text-slate-200">Compliance Frameworks</div>
+                      <div class="text-[11px] text-slate-400">GDP / HACCP automated reports</div>
+                    </div>
+                    <label class="switch"><input type="checkbox" id="dash_compliance_framework" checked><span class="slider"></span></label>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-coldnavy-800">
+          <div class="flex items-center gap-3">
+            <button type="submit" class="px-5 py-2.5 text-xs font-bold rounded-xl bg-gradient-to-r from-cyan-500 to-teal-400 hover:from-cyan-400 hover:to-teal-300 text-coldnavy-950 transition shadow-lg shadow-cyan-500/20 cursor-pointer">
+              💾 Save Settings
+            </button>
+            <button type="button" onclick="handleDashboardResetSettings()" class="px-4 py-2.5 text-xs font-semibold rounded-xl bg-coldnavy-850 hover:bg-coldnavy-800 text-slate-300 border border-coldnavy-750 transition cursor-pointer">
+              ↺ Reset
+            </button>
+          </div>
+          <span class="text-[11px] text-slate-400">Settings synchronized with the central monitoring workspace via localStorage</span>
+        </div>
+      </form>
+
+    </div>
+
+    <!-- ========================================================
+         TAB CONTENT: 5. AI CO-PILOT & PREDICTIVE ENGINE (DUAL-CONTROL WORKSPACE)
+         ======================================================== -->
+    <div id="section-copilot" class="space-y-6 hidden">
+
+      <!-- TOP CO-PILOT CONTROL BANNER -->
+      <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative z-10">
+          <div>
+            <div class="flex items-center gap-3">
+              <span class="p-2.5 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 text-coldnavy-950 font-bold shadow-lg shadow-cyan-500/20">
+                <i data-lucide="bot" class="w-6 h-6 text-white"></i>
+              </span>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h2 class="text-lg sm:text-xl font-extrabold text-white tracking-tight">CryoShield AI Co-Pilot &bull; Dual-Control Engine</h2>
+                  <span class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-cyan-950 text-cyan-300 border border-cyan-800/80 rounded-full font-mono">
+                    SENTINEL v5.2 ACTIVE
+                  </span>
+                </div>
+                <p class="text-xs sm:text-sm text-slate-400 mt-0.5">
+                  Operates the dashboard alongside human operators: continuous IoT telemetry ingestion, +24h multi-horizon forecasting, and self-correcting Kalman historical loops.
+                </p>
+              </div>
+            </div>
+
+            <!-- Operational Sub-system Badges -->
+            <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-coldnavy-850 border border-coldnavy-750 text-slate-300 font-mono text-[11px]">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>Telemetry Ingestion: 100Hz Synced</span>
+              </span>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 font-mono text-[11px]">
+                <i data-lucide="trending-up" class="w-3.5 h-3.5 text-cyan-400"></i>
+                <span>Forecast Confidence: 99.3%</span>
+              </span>
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-purple-500/10 border border-purple-500/30 text-purple-300 font-mono text-[11px]">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-purple-400"></i>
+                <span>Kalman Drift: &plusmn;0.04&deg;C</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Actions & Dual-Control Mode Toggle -->
+          <div class="flex flex-wrap items-center gap-3">
+            <!-- Autonomous Execution Status Badge (No manual mode switcher) -->
+            <div class="flex items-center gap-2 bg-emerald-950/70 px-3.5 py-2 rounded-xl border border-emerald-500/40 text-xs">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span class="font-mono text-emerald-300 font-bold">⚡ 100% UNGATED AUTONOMOUS MODE</span>
+              <span class="text-[10px] text-slate-400 font-mono">(Zero-Touch Self-Healing)</span>
+            </div>
+
+            <!-- Rollback AI Changes -->
+            <button onclick="triggerGlobalRollback()" class="flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl bg-coldnavy-850 hover:bg-coldnavy-800 text-purple-300 border border-purple-800/60 transition active:scale-95 cursor-pointer">
+              <i data-lucide="rotate-ccw" class="w-4 h-4 text-purple-400"></i>
+              <span>Rollback Changes</span>
+            </button>
+
+            <!-- Thermal Surge Simulation -->
+            <button onclick="triggerSimulatedSurge()" class="flex items-center gap-2 px-4 py-2.5 text-xs font-extrabold rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white transition-all shadow-lg shadow-rose-600/25 active:scale-95 cursor-pointer">
+              <i data-lucide="flame" class="w-4 h-4"></i>
+              <span>Simulate Surge</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- AUTONOMOUS AI ACTION FEED (LIVE UNGATED EXECUTION STREAM) -->
+      <section class="bg-gradient-to-r from-emerald-950/30 via-coldnavy-900 to-cyan-950/20 border border-emerald-500/40 rounded-2xl p-5 shadow-xl relative overflow-hidden">
+        <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+          <div class="flex items-center gap-3">
+            <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 ring-active">
+              <i data-lucide="zap" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-bold text-emerald-300 tracking-wide uppercase">Autonomous AI Action Feed &bull; Live Telematics Stream</h3>
+                <span id="tab-approval-mode-badge" class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500 text-coldnavy-950 font-mono animate-pulse">⚡ 100% UNGATED AUTO-EXECUTION</span>
+              </div>
+              <p class="text-xs text-slate-300">Continuous non-blocking execution bus. All predictive excursions, cryo-loop modulations, setpoints, and route corrections are auto-applied instantly with zero manual gating.</p>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-3 text-xs">
+            <div class="bg-coldnavy-950/80 px-3 py-1.5 rounded-lg border border-coldnavy-800 font-mono">
+              <span class="text-slate-400">Auto-Applied Actions:</span>
+              <span id="tab-queue-count" class="text-emerald-400 font-bold ml-1">18 Applied</span>
+            </div>
+            <div class="bg-coldnavy-950/80 px-3 py-1.5 rounded-lg border border-coldnavy-800 font-mono">
+              <span class="text-slate-400">Operator Hold Latency:</span>
+              <span class="text-cyan-300 font-bold ml-1">0ms (Instant)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4" id="autonomousActionFeedCards">
+          
+          <!-- Auto-Applied Card 1: Remote Cryo-Loop Modulation -->
+          <div id="tab-action-card-1" class="bg-coldnavy-900/90 border border-emerald-500/40 rounded-xl p-4 flex flex-col justify-between hover:border-emerald-400/70 transition shadow-md">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px] font-bold uppercase font-mono">AUTO-APPLIED &bull; SUCCESS</span>
+                  <span class="text-xs text-slate-400 font-mono font-semibold">ASSET: CC-101 (mRNA Vaccines)</span>
+                </div>
+                <span class="text-xs text-emerald-400 font-semibold flex items-center gap-1 font-mono">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> ENACTED
+                </span>
+              </div>
+              <h4 class="text-sm font-semibold text-white mb-1">Pre-emptive Remote Cryo-Loop Modulation (-3.5&deg;C Target Override)</h4>
+              <p class="text-xs text-slate-300 mb-3">
+                <strong class="text-cyan-400">Autonomous Mitigation:</strong> Thermal infrared &amp; GPS telematics identified 42-minute traffic standstill in 38.7&deg;C ambient basin. AI engaged secondary cooling loop immediately with zero manual delay. Excursion neutralized.
+              </p>
+              <div class="flex items-center gap-3 text-xs bg-coldnavy-950/80 p-2.5 rounded-lg border border-coldnavy-800 font-mono mb-3">
+                <div><span class="text-slate-500">Breach Margin:</span> <span class="text-emerald-400 font-bold">+34 mins buffer</span></div>
+                <div class="w-px h-4 bg-coldnavy-800"></div>
+                <div><span class="text-slate-500">Power Modulation:</span> <span class="text-amber-300">+2.1 kW draw</span></div>
+                <div class="w-px h-4 bg-coldnavy-800"></div>
+                <div><span class="text-slate-500">Telematics Status:</span> <span class="text-emerald-300 font-bold">ECU_APPLIED</span></div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-coldnavy-800 text-xs font-mono">
+              <span class="text-slate-400">Broadcast: CAN-Bus ID 0x4A1</span>
+              <span class="text-emerald-400 font-bold flex items-center gap-1"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Auto-Applied &bull; Success</span>
+            </div>
+          </div>
+
+          <!-- Auto-Applied Card 2: Route Diversion -->
+          <div id="tab-action-card-2" class="bg-coldnavy-900/90 border border-cyan-500/40 rounded-xl p-4 flex flex-col justify-between hover:border-cyan-400/70 transition shadow-md">
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 text-[10px] font-bold uppercase font-mono">AUTO-APPLIED &bull; SUCCESS</span>
+                  <span class="text-xs text-slate-400 font-mono font-semibold">ASSET: CC-103 (Seafood &amp; Perishables)</span>
+                </div>
+                <span class="text-xs text-cyan-400 font-semibold flex items-center gap-1 font-mono">
+                  <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span> ROUTE DISPATCHED
+                </span>
+              </div>
+              <h4 class="text-sm font-semibold text-white mb-1">Autonomous Route Diversion to Bermondsey Priority Cool Bay (Waypoint 14B)</h4>
+              <p class="text-xs text-slate-300 mb-3">
+                <strong class="text-cyan-400">Autonomous Navigation:</strong> Bridge bottleneck created 110-minute transit delay risk under direct sunlight. AI route engine computed diversion and dispatched turn-by-turn vectors directly to vehicle HUD with zero approval pause.
+              </p>
+              <div class="flex items-center gap-3 text-xs bg-coldnavy-950/80 p-2.5 rounded-lg border border-coldnavy-800 font-mono mb-3">
+                <div><span class="text-slate-500">Saved Exposure:</span> <span class="text-cyan-300 font-bold">72 mins</span></div>
+                <div class="w-px h-4 bg-coldnavy-800"></div>
+                <div><span class="text-slate-500">Risk Reduction:</span> <span class="text-emerald-400 font-bold">0.02% (down from 14.8%)</span></div>
+                <div class="w-px h-4 bg-coldnavy-800"></div>
+                <div><span class="text-slate-500">Driver HUD:</span> <span class="text-emerald-300 font-bold">SYNC_ACKNOWLEDGED</span></div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between pt-2 border-t border-coldnavy-800 text-xs font-mono">
+              <span class="text-slate-400">Waypoints: #14B Bermondsey Cool Bay</span>
+              <span class="text-cyan-300 font-bold flex items-center gap-1"><i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Auto-Applied &bull; Success</span>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Live Streaming Ticker for additional auto-applied interventions -->
+        <div class="mt-3 pt-3 border-t border-emerald-900/30">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-mono font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Real-Time Autonomous Action Event Log
+            </span>
+            <span class="text-[10px] font-mono text-cyan-400">Live Telematics Pipeline</span>
+          </div>
+          <div id="copilot-live-action-ticker" class="space-y-1.5 max-h-36 overflow-y-auto custom-scrollbar font-mono text-xs">
+            <div class="p-2 rounded bg-coldnavy-950/70 border border-emerald-500/30 text-slate-300 flex items-center justify-between">
+              <span class="text-emerald-400 font-bold">[AUTO-EXEC]: AI Auto-Applied: Cryo-Loop Modulation (-3.5°C) on CC-101 • Success</span>
+              <span class="text-[10px] text-slate-500">Latency: 0ms</span>
+            </div>
+            <div class="p-2 rounded bg-coldnavy-950/70 border border-cyan-500/30 text-slate-300 flex items-center justify-between">
+              <span class="text-cyan-400 font-bold">[AUTO-EXEC]: AI Auto-Applied: Bermondsey Cool Bay Diversion on CC-103 • Success</span>
+              <span class="text-[10px] text-slate-500">Latency: 0ms</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- FLEET ASSET SELECTOR CARDS -->
+      <section class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <!-- Asset 1: CC-101 (Vaccines) -->
+        <div onclick="selectCopilotAsset('CC-101')" id="copilot-card-CC-101" class="cursor-pointer bg-coldnavy-900 border-2 border-cyan-400 rounded-2xl p-4 transition-all hover:shadow-lg hover:shadow-cyan-500/10">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-mono font-bold text-cyan-400">UNIT #CC-101</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-700">STABLE</span>
+          </div>
+          <div class="text-base font-bold text-white mb-0.5 truncate">Vaccines (mRNA)</div>
+          <div class="flex items-baseline gap-2 mb-2">
+            <span class="text-2xl font-black font-mono text-cyan-300" id="copilot-temp-CC-101">4.2&deg;C</span>
+            <span class="text-xs text-emerald-400 font-mono font-semibold">&plusmn; 0.04&deg;C</span>
+          </div>
+          <div class="w-full bg-coldnavy-950 h-1.5 rounded-full overflow-hidden mb-2">
+            <div class="bg-cyan-500 h-full w-[45%]"></div>
+          </div>
+          <div class="flex justify-between text-[11px] text-slate-400 font-mono">
+            <span>Vib: <strong class="text-emerald-400">1.12 mm/s</strong></span>
+            <span>Power: <strong class="text-slate-200">2.6 kW</strong></span>
+            <span>Risk: <strong class="text-emerald-400">LOW</strong></span>
+          </div>
+        </div>
+
+        <!-- Asset 2: CC-102 (Dairy) -->
+        <div onclick="selectCopilotAsset('CC-102')" id="copilot-card-CC-102" class="cursor-pointer bg-coldnavy-900/60 border border-coldnavy-800 rounded-2xl p-4 transition-all hover:border-coldnavy-700">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-mono font-bold text-slate-400">UNIT #CC-102</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-950 text-blue-300 border border-blue-700">NOMINAL</span>
+          </div>
+          <div class="text-base font-bold text-white mb-0.5 truncate">Dairy &amp; Fresh Milk</div>
+          <div class="flex items-baseline gap-2 mb-2">
+            <span class="text-2xl font-black font-mono text-slate-200" id="copilot-temp-CC-102">4.8&deg;C</span>
+            <span class="text-xs text-emerald-400 font-mono font-semibold">&plusmn; 0.05&deg;C</span>
+          </div>
+          <div class="w-full bg-coldnavy-950 h-1.5 rounded-full overflow-hidden mb-2">
+            <div class="bg-blue-500 h-full w-[52%]"></div>
+          </div>
+          <div class="flex justify-between text-[11px] text-slate-400 font-mono">
+            <span>Vib: <strong class="text-cyan-400">1.45 mm/s</strong></span>
+            <span>Power: <strong class="text-slate-200">2.9 kW</strong></span>
+            <span>Risk: <strong class="text-blue-400">LOW</strong></span>
+          </div>
+        </div>
+
+        <!-- Asset 3: CC-103 (Seafood - Critical Excursion) -->
+        <div onclick="selectCopilotAsset('CC-103')" id="copilot-card-CC-103" class="cursor-pointer bg-coldnavy-900/60 border border-coldnavy-800 rounded-2xl p-4 transition-all hover:border-coldnavy-700">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-mono font-bold text-rose-400">UNIT #CC-103</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-950 text-rose-300 border border-rose-700 animate-pulse">EXCURSION</span>
+          </div>
+          <div class="text-base font-bold text-white mb-0.5 truncate">Seafood &amp; Perishables</div>
+          <div class="flex items-baseline gap-2 mb-2">
+            <span class="text-2xl font-black font-mono text-rose-400" id="copilot-temp-CC-103">9.2&deg;C</span>
+            <span class="text-xs text-rose-400 font-mono font-semibold">&uarr; +0.8&deg;C/hr</span>
+          </div>
+          <div class="w-full bg-coldnavy-950 h-1.5 rounded-full overflow-hidden mb-2">
+            <div class="bg-rose-500 h-full w-[90%]"></div>
+          </div>
+          <div class="flex justify-between text-[11px] text-slate-400 font-mono">
+            <span>Vib: <strong class="text-amber-400">2.95 mm/s</strong></span>
+            <span>Power: <strong class="text-amber-300">4.1 kW</strong></span>
+            <span>Risk: <strong class="text-rose-400">CRITICAL</strong></span>
+          </div>
+        </div>
+
+        <!-- Asset 4: CC-804 (Ultra-Cold Transport) -->
+        <div onclick="selectCopilotAsset('CC-804')" id="copilot-card-CC-804" class="cursor-pointer bg-coldnavy-900/60 border border-coldnavy-800 rounded-2xl p-4 transition-all hover:border-coldnavy-700">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-mono font-bold text-purple-400">UNIT #CC-804</span>
+            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-950 text-amber-300 border border-amber-700">PREDICTED RISK</span>
+          </div>
+          <div class="text-base font-bold text-white mb-0.5 truncate">Cryo Biologics (-70&deg;C)</div>
+          <div class="flex items-baseline gap-2 mb-2">
+            <span class="text-2xl font-black font-mono text-purple-300" id="copilot-temp-CC-804">-72.4&deg;C</span>
+            <span class="text-xs text-rose-400 font-mono font-semibold">&uarr; +0.4&deg;C/hr</span>
+          </div>
+          <div class="w-full bg-coldnavy-950 h-1.5 rounded-full overflow-hidden mb-2">
+            <div class="bg-purple-500 h-full w-[78%]"></div>
+          </div>
+          <div class="flex justify-between text-[11px] text-slate-400 font-mono">
+            <span>Vib: <strong class="text-amber-400">3.82 mm/s</strong></span>
+            <span>Power: <strong class="text-slate-200">4.2 kW</strong></span>
+            <span>Risk: <strong class="text-amber-400">HIGH</strong></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- CORE TELEMETRY GRAPH & PREDICTIVE CONE CANVAS -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- LEFT 2 COLS: REAL-TIME TELEMETRY & MULTI-HORIZON FORECAST -->
+        <div class="lg:col-span-2 space-y-6">
+
+          <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 shadow-xl">
+            <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-bold text-white tracking-wide uppercase">Real-Time Telemetry &amp; Multi-Horizon Forecast</h3>
+                  <span class="px-2 py-0.5 text-[10px] font-bold rounded bg-purple-950 text-purple-300 border border-purple-700 flex items-center gap-1 shadow-sm font-mono">
+                    <i data-lucide="zap" class="w-3 h-3 text-purple-400"></i> AI-TUNED THRESHOLD ACTIVE
+                  </span>
+                </div>
+                <p class="text-xs text-slate-400">Asset: <span id="copilot-active-asset-title" class="text-cyan-300 font-mono font-semibold">UNIT #CC-101 (Vaccines)</span> &bull; Past 2 Hours (Recorded) + Next 4 Hours (AI Prediction Cone)</p>
+              </div>
+              <div class="flex items-center gap-2 text-xs">
+                <span class="flex items-center gap-1.5 text-slate-300"><span class="w-3 h-0.5 bg-cyan-400 inline-block"></span> Actual Ingest</span>
+                <span class="flex items-center gap-1.5 text-amber-300"><span class="w-3 h-0.5 bg-amber-400 border-dashed inline-block"></span> Forecast Mean</span>
+                <span class="flex items-center gap-1.5 text-rose-400"><span class="w-3 h-0.5 bg-rose-500 inline-block"></span> Critical Limit (8.0&deg;C)</span>
+              </div>
+            </div>
+
+            <!-- VISUAL TELEMETRY BINDING CARD -->
+            <div id="copilot-binding-container" class="ai-binding-active bg-purple-950/20 border border-purple-500/50 rounded-xl p-3.5 mb-4 text-xs transition-all">
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <span class="p-1.5 rounded-lg bg-purple-500/20 text-purple-300">
+                    <i data-lucide="sliders" class="w-4 h-4"></i>
+                  </span>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-purple-200">Programmatic Threshold Binding</span>
+                      <span class="px-1.5 py-0.2 rounded text-[10px] font-mono bg-purple-900 text-purple-300 border border-purple-700">AUTO-TUNED</span>
+                    </div>
+                    <div class="text-[11px] text-slate-300 mt-0.5">
+                      Factory Baseline Limit: <span id="copilot-baseline-threshold" class="line-through text-slate-500 font-mono">8.0&deg;C</span>
+                      &rarr; AI Dynamic Safety Limit: <span id="copilot-tuned-threshold" class="text-purple-300 font-bold font-mono">6.8&deg;C</span>
+                      <span class="text-slate-400 ml-1">(+1.2&deg;C tighter safety buffer for ambient heat sink)</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <button onclick="revertSpecificThreshold()" class="px-2.5 py-1 text-[11px] bg-coldnavy-950 hover:bg-coldnavy-850 text-purple-300 hover:text-white border border-purple-800 rounded-lg transition font-mono flex items-center gap-1 cursor-pointer">
+                    <i data-lucide="rotate-ccw" class="w-3 h-3"></i>
+                    Reset to Baseline
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Canvas Graph -->
+            <div class="relative w-full h-64 bg-coldnavy-950/80 rounded-xl border border-coldnavy-800 p-2 overflow-hidden">
+              <canvas id="telemetryCanvas" class="w-full h-full block"></canvas>
+              <div class="absolute bottom-3 left-4 text-[11px] font-mono text-slate-500">T -2.0 hrs (Actual Telemetry)</div>
+              <div class="absolute bottom-3 left-1/2 -translate-x-1/2 text-[11px] font-mono text-cyan-400 font-bold bg-coldnavy-900/95 px-2 py-0.5 rounded border border-cyan-800">NOW (T=0)</div>
+              <div class="absolute bottom-3 right-4 text-[11px] font-mono text-amber-400">T +4.0 hrs (AI Prediction Cone)</div>
+            </div>
+
+            <!-- 4 Sensor Mini Gauges -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4 text-xs font-mono">
+              <div class="bg-coldnavy-950/70 p-2.5 rounded-xl border border-coldnavy-800">
+                <span class="text-slate-400 text-[11px] block">Discharge Pressure</span>
+                <span id="copilot-disp-pressure" class="text-base font-bold text-cyan-300">188.4 PSI</span>
+                <span class="text-[10px] text-emerald-400 block">&plusmn; 2.1 nominal</span>
+              </div>
+              <div class="bg-coldnavy-950/70 p-2.5 rounded-xl border border-coldnavy-800">
+                <span class="text-slate-400 text-[11px] block">Compressor Power</span>
+                <span id="copilot-disp-power" class="text-base font-bold text-amber-300">4.2 kW</span>
+                <span class="text-[10px] text-amber-400 block">+14% load index</span>
+              </div>
+              <div class="bg-coldnavy-950/70 p-2.5 rounded-xl border border-coldnavy-800">
+                <span class="text-slate-400 text-[11px] block">Vibration (RMS)</span>
+                <span id="copilot-disp-vibration" class="text-base font-bold text-amber-400">3.82 mm/s</span>
+                <span class="text-[10px] text-rose-400 block">Bearing wear signature</span>
+              </div>
+              <div class="bg-coldnavy-950/70 p-2.5 rounded-xl border border-coldnavy-800">
+                <span class="text-slate-400 text-[11px] block">Ambient External</span>
+                <span id="copilot-disp-ambient" class="text-base font-bold text-slate-200">38.7&deg;C</span>
+                <span class="text-[10px] text-rose-400 block">High Solar Flux</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- MECHANICAL WEAR & COMPRESSOR DEGRADATION RADAR -->
+          <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 shadow-xl">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <div class="p-1.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                  <i data-lucide="gauge" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <h3 class="text-sm font-bold text-white uppercase tracking-wide">Predictive Mechanical Degradation &amp; Failure Radar</h3>
+                  <p class="text-xs text-slate-400">FFT Harmonic Vibration &bull; Power Factor Distortion &bull; Suction Throttling</p>
+                </div>
+              </div>
+              <span class="text-xs font-mono px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">Predicted MTBF: 18.4 Days</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div class="bg-coldnavy-950/70 p-3.5 rounded-xl border border-coldnavy-800">
+                <div class="flex justify-between items-center mb-1 text-xs">
+                  <span class="text-slate-400">142 Hz Harmonic Spike</span>
+                  <span class="text-amber-400 font-mono font-bold">+68% vs baseline</span>
+                </div>
+                <div class="w-full bg-coldnavy-900 h-2 rounded-full overflow-hidden mb-2">
+                  <div class="bg-amber-400 h-full w-[68%]"></div>
+                </div>
+                <p class="text-[11px] text-slate-400">Inner bearing race micro-spalling detected via envelope analysis.</p>
+              </div>
+
+              <div class="bg-coldnavy-950/70 p-3.5 rounded-xl border border-coldnavy-800">
+                <div class="flex justify-between items-center mb-1 text-xs">
+                  <span class="text-slate-400">Power Factor Degradation</span>
+                  <span class="text-yellow-400 font-mono font-bold">0.81 (Norm: 0.92)</span>
+                </div>
+                <div class="w-full bg-coldnavy-900 h-2 rounded-full overflow-hidden mb-2">
+                  <div class="bg-yellow-400 h-full w-[45%]"></div>
+                </div>
+                <p class="text-[11px] text-slate-400">Winding impedance drift indicates thermal insulation breakdown in stage 2 stator.</p>
+              </div>
+
+              <div class="bg-coldnavy-950/70 p-3.5 rounded-xl border border-coldnavy-800">
+                <div class="flex justify-between items-center mb-1 text-xs">
+                  <span class="text-slate-400">Compression Delta Ratio</span>
+                  <span class="text-emerald-400 font-mono font-bold">3.92:1 (Healthy)</span>
+                </div>
+                <div class="w-full bg-coldnavy-900 h-2 rounded-full overflow-hidden mb-2">
+                  <div class="bg-emerald-400 h-full w-[85%]"></div>
+                </div>
+                <p class="text-[11px] text-slate-400">Mass flow rate meets cryogenic baseline; expansion valve unblocked.</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- RIGHT COL: HISTORICAL FEEDBACK & SELF-CORRECTION -->
+        <div class="space-y-6">
+
+          <!-- Historical Loop Card -->
+          <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 shadow-xl">
+            <div class="flex items-center gap-2 mb-3">
+              <div class="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-white uppercase tracking-wide">Historical Feedback &amp; Self-Correction</h3>
+                <p class="text-xs text-slate-400">Continuous accuracy audit &amp; algorithmic tuning</p>
+              </div>
+            </div>
+
+            <!-- Model Accuracy Metrics -->
+            <div class="bg-coldnavy-950/70 p-3 rounded-xl border border-coldnavy-800 mb-4 font-mono text-xs space-y-2">
+              <div class="flex justify-between">
+                <span class="text-slate-400">Forecast MAPE:</span>
+                <span class="text-emerald-300 font-bold">1.12% (Benchmark &lt; 2.5%)</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Residual RMSE (Last 72h):</span>
+                <span class="text-emerald-300 font-bold">&plusmn; 0.18&deg;C</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Kalman Gain Calibration:</span>
+                <span class="text-cyan-300 font-bold">K = 0.084 (&plusmn;0.003)</span>
+              </div>
+              <div class="flex justify-between">
+                <span class="text-slate-400">Autonomous Threshold Rate:</span>
+                <span class="text-purple-300 font-bold">14 auto-tunes / week</span>
+              </div>
+            </div>
+
+            <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Automated Learning Insights</h4>
+            <div class="space-y-2.5 text-xs">
+              <div class="p-2.5 rounded-lg bg-coldnavy-950/50 border border-coldnavy-800">
+                <div class="flex items-center justify-between text-[11px] text-cyan-400 font-semibold mb-1">
+                  <span>[PATTERN MINING] Summer Route Heat Sinks</span>
+                  <span class="text-slate-500 font-mono">Learned 3d ago</span>
+                </div>
+                <p class="text-slate-300 text-[11px]">
+                  Historical telemetry on Route 95 reveals an average +1.4&deg;C heat pulse at Exit 28 concrete cut. Predictive engine now auto-chills cargo by 0.8&deg;C 20 minutes prior.
+                </p>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-coldnavy-950/50 border border-coldnavy-800">
+                <div class="flex items-center justify-between text-[11px] text-emerald-400 font-semibold mb-1">
+                  <span>[RULE TUNING] False Alarm Reduction</span>
+                  <span class="text-slate-500 font-mono">Auto-Tuned Yesterday</span>
+                </div>
+                <p class="text-slate-300 text-[11px]">
+                  Identified 3 previous false alarms caused by 30-second inspection door openings. AI widened hysteresis window by 45 seconds while monitoring cargo core lag.
+                </p>
+              </div>
+
+              <div class="p-2.5 rounded-lg bg-coldnavy-950/50 border border-coldnavy-800">
+                <div class="flex items-center justify-between text-[11px] text-purple-400 font-semibold mb-1">
+                  <span>[AGING EQUIPMENT BIAS] CC-804 Derate</span>
+                  <span class="text-slate-500 font-mono">Updated 2h ago</span>
+                </div>
+                <p class="text-slate-300 text-[11px]">
+                  Factoring in 1,200 compressor operating hours; thermal transfer coefficient downgraded by 4.2% so cooling demand is never under-budgeted.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transit Environmental Threat Radar -->
+          <div class="bg-coldnavy-900 border border-coldnavy-800 rounded-2xl p-5 shadow-xl">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-sm font-bold text-white uppercase tracking-wide">Transit Environmental Threat Radar</h3>
+              <span class="text-xs text-rose-400 font-bold bg-rose-950/80 px-2 py-0.5 rounded border border-rose-800">ELEVATED THREATS</span>
+            </div>
+
+            <div class="space-y-3 text-xs">
+              <div>
+                <div class="flex justify-between text-slate-300 mb-1">
+                  <span>Interstate Thermal Island (Solar Flux)</span>
+                  <span class="text-rose-400 font-mono font-bold">88% Risk</span>
+                </div>
+                <div class="w-full bg-coldnavy-950 h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-rose-500 h-full w-[88%]"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-slate-300 mb-1">
+                  <span>Customs / Toll Bottleneck Delay</span>
+                  <span class="text-amber-400 font-mono font-bold">64% Risk</span>
+                </div>
+                <div class="w-full bg-coldnavy-950 h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-amber-400 h-full w-[64%]"></div>
+                </div>
+              </div>
+
+              <div>
+                <div class="flex justify-between text-slate-300 mb-1">
+                  <span>Dry Ice Sublimation Acceleration</span>
+                  <span class="text-cyan-400 font-mono font-bold">32% Rate</span>
+                </div>
+                <div class="w-full bg-coldnavy-950 h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-cyan-400 h-full w-[32%]"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ========================================================
+       NOTIFY DRIVER MODAL
+       ======================================================== -->
+  <div id="driver-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-coldnavy-950/85 backdrop-blur-sm hidden">
+    <div class="bg-coldnavy-900 border border-coldnavy-750 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-coldnavy-800">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400">
+            <i data-lucide="phone-call" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-white text-base">Driver Urgent Dispatch Telematics</h3>
+            <p class="text-xs text-slate-400">Dispatch cellular notification to assigned driver</p>
+          </div>
+        </div>
+        <button onclick="closeDriverModal()" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div class="p-3 bg-coldnavy-950 rounded-xl border border-coldnavy-800 space-y-1">
+          <div class="text-slate-400">Recipient:</div>
+          <div class="font-bold text-white text-sm" id="modal-driver-name">Arjun Kumar (Vehicle CC-103)</div>
+          <div class="text-cyan-400 font-mono text-[11px]">+44 7700 900123 • Cargo: Seafood</div>
+        </div>
+
+        <div>
+          <label class="block text-slate-400 mb-1">Pre-filled Urgent Instruction:</label>
+          <textarea id="modal-driver-message" rows="3" class="w-full bg-coldnavy-950 border border-coldnavy-750 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-400 font-mono">URGENT: Telemetry indicates Container CC-103 temperature breach (+9.2°C). Please check auxiliary compressor circuit immediately and verify seal integrity.</textarea>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-coldnavy-800 flex justify-end gap-2.5 text-xs">
+        <button onclick="closeDriverModal()" class="px-4 py-2 rounded-xl bg-coldnavy-850 hover:bg-coldnavy-800 text-slate-300 font-semibold transition">Cancel</button>
+        <button onclick="sendDriverNotification()" class="px-5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-coldnavy-950 font-bold transition">Send Urgent SMS &amp; Telematics Ping</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================
+       FOOTER
+       ======================================================== -->
+  <footer class="mt-8 border-t border-coldnavy-800 bg-coldnavy-900 py-6">
+    <div class="max-w-[1720px] mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+      <div class="flex items-center gap-2.5">
+        <i data-lucide="snowflake" class="w-4 h-4 text-cyan-400"></i>
+        <span class="font-bold text-white tracking-wide">Smart Cold Chain Telematics &amp; Fleet Navigation System</span>
+      </div>
+      <div class="text-slate-400 font-medium">
+        <span>Common Warehouse Dispatch • 3 Road Corridors • FDA 21 CFR Part 11 Compliant</span>
+      </div>
+      <div class="text-[11px] text-slate-500 font-mono">
+        IoT Gateway Telemetry v4.2 • London Core Mesh
+      </div>
+    </div>
+  </footer>
+
+  </div> <!-- End Right App Content Area (lg:ml-[260px]) -->
+
+  <!-- ========================================================
+       JAVASCRIPT: ARCHITECTURE, DISPATCH ENGINE, MAP & CHARTS
+       ======================================================== -->
+  <script src="assets/js/dashboard.js"></script>
+</body>
+</html>

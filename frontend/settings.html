@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Cold Chain - Settings</title>
+    <link rel="stylesheet" href="assets/css/settings.css">
+</head>
+<body>
+
+    <header>
+        <div class="header-title-area">
+            <h1>⚙️ Smart Cold Chain - Settings</h1>
+            <p>Software Operational Thresholds, Alert Escalation Rules, Telemetry Frequency, RBAC, and Localization</p>
+        </div>
+        <div class="header-actions">
+            <a href="index.html" class="btn-nav">← Back to Dashboard</a>
+            <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">☀️ Light Mode</button>
+        </div>
+    </header>
+
+    <form id="settingsForm" onsubmit="saveSettings(event)">
+        <div class="grid-container">
+            
+            <!-- Card 1: Environmental & Operational Threshold Settings -->
+            <div class="card">
+                <div class="card-header">🌡️ Environmental &amp; Operational Thresholds</div>
+                <div class="card-body">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">Pharmaceuticals Min Limit</div>
+                            <div class="setting-desc">Lower software temperature excursion bound (<span class="unit-label">°C</span>)</div>
+                        </div>
+                        <input type="number" id="pharmaMin" value="2.0" step="0.1" min="-50" max="50">
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">Pharmaceuticals Max Limit</div>
+                            <div class="setting-desc">Upper software temperature excursion bound (<span class="unit-label">°C</span>)</div>
+                        </div>
+                        <input type="number" id="pharmaMax" value="8.0" step="0.1" min="-50" max="50">
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">Perishable Produce Limit</div>
+                            <div class="setting-desc">Acceptable storage range threshold (1°C to 7°C)</div>
+                        </div>
+                        <input type="number" id="perishable" value="7.0" step="0.1" min="1" max="7">
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">Frozen Goods Threshold</div>
+                            <div class="setting-desc">Maximum permissible deep-freeze boundary (&lt;= -18°C)</div>
+                        </div>
+                        <input type="number" id="frozen" value="-18.0" step="0.1" max="-18">
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">Excursion Duration Limit</div>
+                            <div class="setting-desc">Software trip timer before triggering breach alarm (mins)</div>
+                        </div>
+                        <input type="number" id="excursion" value="45" min="1" max="1440">
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">Defrost &amp; Maintenance Modes</div>
+                            <div class="setting-desc">Enable software operational alarm pauses during defrosting</div>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="defrostMode" checked><span class="slider"></span></label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 2: Notification & Alert Escalation Rules -->
+            <div class="card">
+                <div class="card-header">🔔 Notification &amp; Alert Rules</div>
+                <div class="card-body">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">Warning Severity Tier</div>
+                            <div class="setting-desc">Initial notification tier for soft excursion events</div>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="tierWarning" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">Critical Severity Tier</div>
+                            <div class="setting-desc">Escalated notification tier for sustained thermal breach</div>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="tierCritical" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">Emergency Tier &amp; Webhooks</div>
+                            <div class="setting-desc">Automated webhook dispatch to response coordinators</div>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="tierEmergency" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">Escalation Timer</div>
+                            <div class="setting-desc">Software delay before auto-escalating unacknowledged alarms (mins)</div>
+                        </div>
+                        <input type="number" id="escalation" value="15" min="1" max="120">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 3: Telemetry & Data Management Settings -->
+            <div class="card">
+                <div class="card-header">📊 Telemetry &amp; Data Management</div>
+                <div class="card-body">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">Transit Polling Interval</div>
+                            <div class="setting-desc">Software data sync frequency during active in-transit state</div>
+                        </div>
+                        <select id="transitPolling">
+                            <option value="5">5 Minutes</option>
+                            <option value="10">10 Minutes</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">Idle Polling Interval</div>
+                            <div class="setting-desc">Software data sync frequency during facility standby</div>
+                        </div>
+                        <select id="idlePolling">
+                            <option value="60">60 Minutes</option>
+                            <option value="30">30 Minutes</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">Offline Data Synchronization</div>
+                            <div class="setting-desc">Buffer client-side telemetry state and reconcile on reconnect</div>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="offlineSync" checked><span class="slider"></span></label>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">Data Retention Period</div>
+                            <div class="setting-desc">Historical telemetry log life before cold storage archive (days)</div>
+                        </div>
+                        <input type="number" id="retention" value="365" min="30" max="3650">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 4: User Access & Role-Based Permissions (RBAC) -->
+            <div class="card">
+                <div class="card-header">👥 User Access &amp; RBAC</div>
+                <div class="card-body">
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">Default Role Assignment</div>
+                            <div class="setting-desc">Initial software authorization role for newly registered operators</div>
+                        </div>
+                        <select id="defaultRole">
+                            <option value="Fleet Manager">Fleet Manager</option>
+                            <option value="Administrator">Administrator</option>
+                            <option value="Auditor">Auditor</option>
+                            <option value="View-Only Guest">View-Only Guest</option>
+                        </select>
+                    </div>
+                    <div class="setting-row">
+                        <div class="setting-info">
+                            <div class="setting-title">System-Wide Audit Logging</div>
+                            <div class="setting-desc">Track user actions, parameter revisions, and manual override events</div>
+                        </div>
+                        <label class="switch"><input type="checkbox" id="auditLogging" checked><span class="slider"></span></label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card 5: System & Localization Preferences -->
+            <div class="card" style="grid-column: span 2;">
+                <div class="card-header">🌍 System &amp; Localization Preferences</div>
+                <div class="card-body">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                        <div>
+                            <div class="setting-row" style="border-bottom: none; padding-top: 0;">
+                                <div class="setting-info">
+                                    <div class="setting-title">Temperature Unit</div>
+                                    <div class="setting-desc">Default software temperature presentation unit</div>
+                                </div>
+                                <select id="tempUnit" onchange="handleUnitChange(this.value)">
+                                    <option value="C">Celsius (°C)</option>
+                                    <option value="F">Fahrenheit (°F)</option>
+                                </select>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-info">
+                                    <div class="setting-title">Distance Unit</div>
+                                    <div class="setting-desc">Route distance calculation format</div>
+                                </div>
+                                <select id="distUnit">
+                                    <option value="km">Kilometers</option>
+                                    <option value="mi">Miles</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="setting-row" style="border-bottom: none; padding-top: 0;">
+                                <div class="setting-info">
+                                    <div class="setting-title">Timezone Synchronization</div>
+                                    <div class="setting-desc">Cross-corridor timestamp standardization rule</div>
+                                </div>
+                                <select id="timezoneSync">
+                                    <option value="UTC">UTC (Coordinated)</option>
+                                    <option value="Local">Local Time</option>
+                                </select>
+                            </div>
+                            <div class="setting-row">
+                                <div class="setting-info">
+                                    <div class="setting-title">Compliance Frameworks</div>
+                                    <div class="setting-desc">Automated GDP &amp; HACCP digital audit compliance verification</div>
+                                </div>
+                                <label class="switch"><input type="checkbox" id="complianceFramework" checked><span class="slider"></span></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="footer-actions">
+            <div class="action-buttons">
+                <button type="submit" class="btn btn-primary">💾 Save Settings</button>
+                <button type="button" class="btn btn-secondary" onclick="resetSettings()">↺ Reset</button>
+            </div>
+            <div class="footer-note">
+                Settings are synchronized with the central monitoring workspace via localStorage.
+            </div>
+        </div>
+    </form>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="assets/js/settings.js"></script>
+
+</body>
+</html>
